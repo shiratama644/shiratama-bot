@@ -60,9 +60,13 @@ export function buildClient(token: string, appId: string, guildId?: string): Cli
         const winnerCountRaw = interaction.fields.getTextInputValue('winnerCount');
         const winnerCount = Number.parseInt(winnerCountRaw || '1', 10);
 
+        if (!interaction.guildId || !interaction.channelId) {
+          throw new Error('サーバー内テキストチャンネルで実行してください。');
+        }
+
         const created = await createGiveawayPost({
           client,
-          guildId: interaction.guildId!,
+          guildId: interaction.guildId,
           channelId: interaction.channelId,
           title,
           description,

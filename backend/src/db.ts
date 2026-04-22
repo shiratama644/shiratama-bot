@@ -122,7 +122,7 @@ export async function getActiveGiveaways(guildId: string): Promise<Giveaway[]> {
      ORDER BY end_at ASC`,
     [guildId]
   );
-  return result.rows.map((row) => mapGiveaway(row as Record<string, unknown>));
+  return result.rows.map((row: Record<string, unknown>) => mapGiveaway(row));
 }
 
 export async function getDueGiveaways(now: Date): Promise<Giveaway[]> {
@@ -132,7 +132,7 @@ export async function getDueGiveaways(now: Date): Promise<Giveaway[]> {
      ORDER BY end_at ASC`,
     [now]
   );
-  return result.rows.map((row) => mapGiveaway(row as Record<string, unknown>));
+  return result.rows.map((row: Record<string, unknown>) => mapGiveaway(row));
 }
 
 export async function markGiveawayEnded(id: string): Promise<void> {
@@ -171,5 +171,5 @@ export async function listEntries(giveawayId: string): Promise<string[]> {
   const result = await pool.query('SELECT user_id FROM giveaway_entries WHERE giveaway_id = $1', [
     giveawayId
   ]);
-  return result.rows.map((row) => String(row.user_id));
+  return result.rows.map((row: Record<string, unknown>) => String(row.user_id));
 }

@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import dayjs from 'dayjs';
 import { VueRoleEditor } from './components/VueRoleEditor';
 import './App.css';
@@ -36,9 +37,6 @@ function App() {
     setGiveaways(data.giveaways ?? []);
   };
 
-  useEffect(() => {
-    void fetchGiveaways();
-  }, [guildId]);
 
   const submitGiveaway = async (event: FormEvent) => {
     event.preventDefault();

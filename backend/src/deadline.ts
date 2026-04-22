@@ -3,7 +3,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 
 dayjs.extend(customParseFormat);
 
-const DURATION_RE = /^(\\d+)(m|h|d)$/i;
+const DURATION_RE = /^(\d+)(m|h|d)$/i;
 
 export function parseDeadline(input: string): Date {
   const value = input.trim();
