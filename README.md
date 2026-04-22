@@ -40,7 +40,7 @@ cp web/.env.example web/.env
 ## セットアップ
 
 ```bash
-npm install
+pnpm install
 ```
 
 ## 開発起動
@@ -48,19 +48,19 @@ npm install
 バックエンド:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 フロントエンド:
 
 ```bash
-npm run dev:web
+pnpm dev:web
 ```
 
 ## 検証コマンド
 
 ```bash
-npm run lint
-npm run build
-npm run test
+pnpm lint
+pnpm build
+pnpm test
 ```

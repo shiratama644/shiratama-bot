@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npm run -w backend build && npm run -w web build",
-    "dev": "npm run -w backend dev",
-    "dev:web": "npm run -w web dev",
-    "test": "npm run -w backend build && node --test _test_/**/*.test.mjs && npm run -w backend test",
-    "lint": "npm run -w backend lint && npm run -w web lint"
+    "build": "pnpm --filter backend build && pnpm --filter web build",
+    "dev": "pnpm --filter backend dev",
+    "dev:web": "pnpm --filter web dev",
+    "test": "pnpm --filter backend build && node --test _test_/**/*.test.mjs && pnpm --filter backend test",
+    "lint": "pnpm --filter backend lint && pnpm --filter web lint"
   },
   "repository": {
     "type": "git",
