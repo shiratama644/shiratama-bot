@@ -37,10 +37,34 @@ cp backend/.env.example backend/.env
 cp web/.env.example web/.env
 ```
 
+## Termux環境でのPostgreSQL導入
+
+```bash
+pkg update && pkg upgrade -y
+pkg install -y postgresql
+initdb $PREFIX/var/lib/postgresql
+pg_ctl -D $PREFIX/var/lib/postgresql start
+createuser -s postgres
+psql -d postgres -c "ALTER USER postgres WITH PASSWORD 'postgres';"
+createdb -O postgres giveaway
+```
+
+`backend/.env` の `DATABASE_URL` は以下を使えます。
+
+```bash
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/giveaway
+```
+
+停止する場合:
+
+```bash
+pg_ctl -D $PREFIX/var/lib/postgresql stop
+```
+
 ## セットアップ
 
 ```bash
-npm install
+pnpm install
 ```
 
 ## 開発起動
@@ -48,19 +72,19 @@ npm install
 バックエンド:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 フロントエンド:
 
 ```bash
-npm run dev:web
+pnpm dev:web
 ```
 
 ## 検証コマンド
 
 ```bash
-npm run lint
-npm run build
-npm run test
+pnpm lint
+pnpm build
+pnpm test
 ```
