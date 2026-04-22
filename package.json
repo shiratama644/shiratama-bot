@@ -7,7 +7,7 @@
     "build": "npm run -w backend build && npm run -w web build",
     "dev": "npm run -w backend dev",
     "dev:web": "npm run -w web dev",
-    "test": "npm run -w backend test",
+    "test": "npm run -w backend build && node --test _test_/**/*.test.js && npm run -w backend test",
     "lint": "npm run -w backend lint && npm run -w web lint"
   },
   "repository": {
