@@ -58,7 +58,7 @@ DATABASE_URL=postgres://DB_USER:DB_PASSWORD@localhost:5432/giveaway
 ```
 
 - `DB_USER`: `whoami` で確認できるユーザー名（上記手順の `$(whoami)` と同じ）
-- `DB_PASSWORD`: `ALTER USER` で設定したパスワード
+- `DB_PASSWORD`: `psql -c '\password'` で設定したパスワード
 
 停止する場合:
 
