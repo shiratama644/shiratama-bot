@@ -49,11 +49,16 @@ psql -c "ALTER USER $(whoami) WITH PASSWORD 'your_strong_password';"
 createdb giveaway
 ```
 
+`your_strong_password` は必ず自分で強力な値に置き換えてください。
+
 `backend/.env` の `DATABASE_URL` は以下を使えます。
 
 ```bash
 DATABASE_URL=postgres://<db_user>:<db_password>@localhost:5432/giveaway
 ```
+
+- `<db_user>`: `whoami` で確認できるユーザー名（上記手順の `$(whoami)` と同じ）
+- `<db_password>`: `ALTER USER` で設定したパスワード
 
 停止する場合:
 
