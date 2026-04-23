@@ -51,7 +51,7 @@ psql -d postgres
 createdb giveaway
 ```
 
-`psql -d postgres` 実行後、`\password` の対話プロンプトで強固なパスワードを入力してください。
+`psql -d postgres` 実行後、`\password` の対話プロンプトで「現在のユーザー（`$(whoami)`）」の強固なパスワードを入力してください。
 
 `backend/.env` の `DATABASE_URL` は以下を使えます。
 
@@ -59,7 +59,7 @@ createdb giveaway
 DATABASE_URL=postgres://DB_USER:DB_PASSWORD@localhost:5432/giveaway
 ```
 
-- `DB_USER`: 上記手順で使用した `$(whoami)` の実際の値
+- `DB_USER`: `whoami` コマンドの出力値（実際のユーザー名）
 - `DB_PASSWORD`: `\password` で実際に設定した値
 
 停止する場合:
