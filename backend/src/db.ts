@@ -5,6 +5,8 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
+console.log("DATABASE_URL RAW(db.ts) =", process.env.DATABASE_URL);
+
 function mapGiveaway(row: Record<string, unknown>): Giveaway {
   return {
     id: String(row.id),

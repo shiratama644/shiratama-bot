@@ -14,6 +14,8 @@ if (!token || !appId || !process.env.DATABASE_URL) {
   throw new Error('DISCORD_BOT_TOKEN / DISCORD_APP_ID / DATABASE_URL は必須です。');
 }
 
+console.log("DATABASE_URL RAW(index.ts) =", process.env.DATABASE_URL);
+
 await initSchema();
 
 const client = buildClient(token, appId, guildId);
