@@ -55,11 +55,11 @@ createdb giveaway
 `backend/.env` の `DATABASE_URL` は以下を使えます。
 
 ```bash
-DATABASE_URL=postgres://<db_user>:<db_password>@localhost:5432/giveaway
+DATABASE_URL=postgres://DB_USER:DB_PASSWORD@localhost:5432/giveaway
 ```
 
-- `<db_user>`: `whoami` で確認できるユーザー名（上記手順の `$(whoami)` と同じ）
-- `<db_password>`: `ALTER USER` で設定したパスワード
+- `DB_USER`: `whoami` で確認できるユーザー名（上記手順の `$(whoami)` と同じ）
+- `DB_PASSWORD`: `ALTER USER` で設定したパスワード
 
 停止する場合:
 
