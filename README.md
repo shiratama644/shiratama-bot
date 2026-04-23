@@ -42,18 +42,25 @@ cp web/.env.example web/.env
 ```bash
 pkg update && pkg upgrade -y
 pkg install -y postgresql
-initdb $PREFIX/var/lib/postgresql
-pg_ctl -D $PREFIX/var/lib/postgresql start
-createuser -s postgres
-psql -d postgres -c "ALTER USER postgres WITH PASSWORD 'postgres';"
-createdb -O postgres giveaway
+initdb -D $PREFIX/var/lib/postgresql
+pg_ctl -D $PREFIX/var/lib/postgresql -l $PREFIX/var/lib/postgresql/logfile start
+createuser -s $(whoami)
+psql -d postgres
+\password
+\q
+createdb giveaway
 ```
+
+`psql -d postgres` 実行後、`\password` の対話プロンプトで「現在のユーザー（`$(whoami)`）」の強固なパスワードを入力してください。
 
 `backend/.env` の `DATABASE_URL` は以下を使えます。
 
 ```bash
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/giveaway
+DATABASE_URL=postgres://DB_USER:DB_PASSWORD@localhost:5432/giveaway
 ```
+
+- `DB_USER`: `whoami` コマンドの出力値（実際のユーザー名）
+- `DB_PASSWORD`: `\password` で実際に設定した値
 
 停止する場合:
 
