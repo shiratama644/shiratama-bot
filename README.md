@@ -45,12 +45,11 @@ pkg install -y postgresql
 initdb -D $PREFIX/var/lib/postgresql
 pg_ctl -D $PREFIX/var/lib/postgresql -l logfile start
 createuser -s $(whoami)
-psql -c "ALTER USER \"$(whoami)\" WITH PASSWORD 'CHANGE_ME_STRONG_PASSWORD';"
+psql -c '\password'
 createdb giveaway
 ```
 
-'CHANGE_ME_STRONG_PASSWORD' は必ず自分で強力な値に置き換えてください。
-シェル履歴へ残したくない場合は `psql` に入って `\password` を実行してください。
+`psql -c '\password'` 実行後の対話プロンプトで、強力なパスワードを入力してください。
 
 `backend/.env` の `DATABASE_URL` は以下を使えます。
 
