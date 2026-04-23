@@ -1,9 +1,16 @@
 import { Pool } from 'pg';
 import type { Giveaway } from './types.js';
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-});
+let pool: Pool | null = null;
+
+function getPool(): Pool {
+  if (pool === null) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL
+    });
+  }
+  return pool;
+}
 
 function mapGiveaway(row: Record<string, unknown>): Giveaway {
   return {
@@ -22,7 +29,7 @@ function mapGiveaway(row: Record<string, unknown>): Giveaway {
 }
 
 export async function initSchema(): Promise<void> {
-  await pool.query(`
+  await getPool().query(`
     CREATE TABLE IF NOT EXISTS guild_settings (
       guild_id TEXT PRIMARY KEY,
       manager_role_ids TEXT[] NOT NULL DEFAULT '{}'
@@ -54,7 +61,7 @@ export async function initSchema(): Promise<void> {
 }
 
 export async function getManagerRoleIds(guildId: string): Promise<string[]> {
-  const result = await pool.query(
+  const result = await getPool().query(
     'SELECT manager_role_ids FROM guild_settings WHERE guild_id = $1',
     [guildId]
   );
@@ -65,7 +72,7 @@ export async function getManagerRoleIds(guildId: string): Promise<string[]> {
 }
 
 export async function setManagerRoleIds(guildId: string, roleIds: string[]): Promise<void> {
-  await pool.query(
+  await getPool().query(
     `INSERT INTO guild_settings (guild_id, manager_role_ids)
      VALUES ($1, $2)
      ON CONFLICT (guild_id)
@@ -84,7 +91,7 @@ export async function createGiveaway(params: {
   winnerCount: number;
   createdBy: string;
 }): Promise<Giveaway> {
-  const result = await pool.query(
+  const result = await getPool().query(
     `INSERT INTO giveaways (
       id, guild_id, channel_id, title, description, end_at, winner_count, created_by
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
@@ -104,11 +111,11 @@ export async function createGiveaway(params: {
 }
 
 export async function setGiveawayMessageId(id: string, messageId: string): Promise<void> {
-  await pool.query('UPDATE giveaways SET message_id = $2 WHERE id = $1', [id, messageId]);
+  await getPool().query('UPDATE giveaways SET message_id = $2 WHERE id = $1', [id, messageId]);
 }
 
 export async function getGiveaway(id: string): Promise<Giveaway | null> {
-  const result = await pool.query('SELECT * FROM giveaways WHERE id = $1', [id]);
+  const result = await getPool().query('SELECT * FROM giveaways WHERE id = $1', [id]);
   if (result.rowCount === 0) {
     return null;
   }
@@ -116,7 +123,7 @@ export async function getGiveaway(id: string): Promise<Giveaway | null> {
 }
 
 export async function getActiveGiveaways(guildId: string): Promise<Giveaway[]> {
-  const result = await pool.query(
+  const result = await getPool().query(
     `SELECT * FROM giveaways
      WHERE guild_id = $1 AND status = 'active'
      ORDER BY end_at ASC`,
@@ -126,7 +133,7 @@ export async function getActiveGiveaways(guildId: string): Promise<Giveaway[]> {
 }
 
 export async function getDueGiveaways(now: Date): Promise<Giveaway[]> {
-  const result = await pool.query(
+  const result = await getPool().query(
     `SELECT * FROM giveaways
      WHERE status = 'active' AND end_at <= $1
      ORDER BY end_at ASC`,
@@ -136,23 +143,23 @@ export async function getDueGiveaways(now: Date): Promise<Giveaway[]> {
 }
 
 export async function markGiveawayEnded(id: string): Promise<void> {
-  await pool.query(`UPDATE giveaways SET status = 'ended' WHERE id = $1`, [id]);
+  await getPool().query(`UPDATE giveaways SET status = 'ended' WHERE id = $1`, [id]);
 }
 
 export async function toggleGiveawayEntry(giveawayId: string, userId: string): Promise<'joined' | 'left'> {
-  const existing = await pool.query(
+  const existing = await getPool().query(
     'SELECT 1 FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2',
     [giveawayId, userId]
   );
   if (existing.rowCount && existing.rowCount > 0) {
-    await pool.query('DELETE FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2', [
+    await getPool().query('DELETE FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2', [
       giveawayId,
       userId
     ]);
     return 'left';
   }
 
-  await pool.query(
+  await getPool().query(
     'INSERT INTO giveaway_entries (giveaway_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
     [giveawayId, userId]
   );
@@ -160,7 +167,7 @@ export async function toggleGiveawayEntry(giveawayId: string, userId: string): P
 }
 
 export async function countEntries(giveawayId: string): Promise<number> {
-  const result = await pool.query(
+  const result = await getPool().query(
     'SELECT COUNT(*)::int AS count FROM giveaway_entries WHERE giveaway_id = $1',
     [giveawayId]
   );
@@ -168,7 +175,7 @@ export async function countEntries(giveawayId: string): Promise<number> {
 }
 
 export async function listEntries(giveawayId: string): Promise<string[]> {
-  const result = await pool.query('SELECT user_id FROM giveaway_entries WHERE giveaway_id = $1', [
+  const result = await getPool().query('SELECT user_id FROM giveaway_entries WHERE giveaway_id = $1', [
     giveawayId
   ]);
   return result.rows.map((row: Record<string, unknown>) => String(row.user_id));
