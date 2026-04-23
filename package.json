@@ -1,5 +1,5 @@
 {
-  "name": "shiratama-bot",
+  "name": "applejp-bot",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,21 +8,21 @@
     "dev": "pnpm --filter backend dev",
     "dev:web": "pnpm --filter web dev",
     "dev:all": "concurrently -n backend,web -c blue,magenta \"pnpm dev\" \"pnpm dev:web\"",
-    "test": "pnpm --filter backend build && node --test _test_/**/*.test.mjs && pnpm --filter backend test",
+    "test": "pnpm --filter backend build && node --test _test_/*.test.mjs && pnpm --filter backend test",
     "lint": "pnpm --filter backend lint && pnpm --filter web lint"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shiratama644/shiratama-bot.git"
+    "url": "git+https://github.com/shiratama644/applejp-bot.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/shiratama644/shiratama-bot/issues"
+    "url": "https://github.com/shiratama644/applejp-bot/issues"
   },
-  "homepage": "https://github.com/shiratama644/shiratama-bot#readme",
+  "homepage": "https://github.com/shiratama644/applejp-bot#readme",
   "private": true,
   "workspaces": [
     "backend",
