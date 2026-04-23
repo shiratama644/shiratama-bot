@@ -45,11 +45,13 @@ pkg install -y postgresql
 initdb -D $PREFIX/var/lib/postgresql
 pg_ctl -D $PREFIX/var/lib/postgresql -l $PREFIX/var/lib/postgresql/logfile start
 createuser -s $(whoami)
-psql -d postgres -c '\password'
+psql -d postgres
+\password
+\q
 createdb giveaway
 ```
 
-`psql -d postgres -c '\password'` 実行後の対話プロンプトで、強固なパスワードを入力してください。
+`psql -d postgres` 実行後、`\password` の対話プロンプトで強固なパスワードを入力してください。
 
 `backend/.env` の `DATABASE_URL` は以下を使えます。
 
