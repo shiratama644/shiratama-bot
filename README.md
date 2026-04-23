@@ -1,4 +1,4 @@
-# shiratama-bot Giveaway Bot
+# applejp-bot Giveaway Bot
 
 React + Vue.js + Vite のWeb管理画面と、Node.js + Discord.js + PostgreSQL のバックエンドで構成した Giveaway Discord Bot です。
 
