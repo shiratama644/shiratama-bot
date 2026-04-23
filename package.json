@@ -7,6 +7,7 @@
     "build": "pnpm --filter backend build && pnpm --filter web build",
     "dev": "pnpm --filter backend dev",
     "dev:web": "pnpm --filter web dev",
+    "dev:all": "concurrently -n backend,web -c blue,magenta \"pnpm dev\" \"pnpm dev:web\"",
     "test": "pnpm --filter backend build && node --test _test_/**/*.test.mjs && pnpm --filter backend test",
     "lint": "pnpm --filter backend lint && pnpm --filter web lint"
   },
@@ -27,5 +28,8 @@
     "backend",
     "web"
   ],
-  "packageManager": "pnpm@10.33.1+sha512.05ba3c1d5d1c18f68df06470d74055e62d41fc110a0c660db1b2dfb2785327f04cf0f68345d4609bc52089e7fa0343c31593b2f9594e2c5d5da426230acc9820"
+  "packageManager": "pnpm@10.33.1+sha512.05ba3c1d5d1c18f68df06470d74055e62d41fc110a0c660db1b2dfb2785327f04cf0f68345d4609bc52089e7fa0343c31593b2f9594e2c5d5da426230acc9820",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
 }
