@@ -129,7 +129,7 @@ async function handleSlashCommand(client: Client, interaction: ChatInputCommandI
     .setLabel('期限 (必須: 2026/04/22, 10m, 10h, 5d)')
     .setStyle(TextInputStyle.Short)
     .setRequired(true)
-    .setPlaceholder('2026/04/22 または 10m');
+    .setPlaceholder('2026/01/01 または 10m');
 
   const winnerCountInput = new TextInputBuilder()
     .setCustomId('winnerCount')

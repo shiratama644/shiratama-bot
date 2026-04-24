@@ -41,10 +41,10 @@ export function giveawayEmbed(params: {
     .setTitle(`🎁 ${params.title}`)
     .setDescription(params.description ?? '説明なし')
     .addFields(
-      { name: '締切', value: `<t:${Math.floor(params.endAt.getTime() / 1000)}:F>`, inline: false },
-      { name: '当選人数', value: String(params.winnerCount), inline: true },
-      { name: '参加人数', value: String(params.entries), inline: true },
-      { name: '状態', value: params.status === 'active' ? '開催中' : '終了', inline: true }
+      { name: 'Ends'', value: `<t:${Math.floor(params.endAt.getTime() / 1000)}:F>`, inline: false },
+      { name: 'Winners', value: String(params.winnerCount), inline: true },
+      { name: 'Entries', value: String(params.entries), inline: true },
+      { name: 'Status', value: params.status === 'active' ? '🟢 Ongoing' : '🔴 Ended', inline: true }
     )
     .setColor(params.status === 'active' ? 0x57f287 : 0xed4245);
   return embed;
@@ -111,7 +111,7 @@ function pickWinners(participants: string[], winnerCount: number): string[] {
 
 export async function toggleEntryAndBuildMessage(giveawayId: string, userId: string): Promise<string> {
   const status = await toggleGiveawayEntry(giveawayId, userId);
-  return status === 'joined' ? '参加しました。' : '退出しました。';
+  return status === 'joined' ? '✅ You are now entered!' : '❌️ You have left.';
 }
 
 export async function refreshGiveawayMessage(client: Client, giveawayId: string): Promise<void> {
@@ -180,7 +180,10 @@ export async function endGiveaway(client: Client, giveawayId: string): Promise<v
   }
 
   const mentions = winners.map((id) => userMention(id)).join(' ');
-  await sourceMessage.reply(`🎉 おめでとうございます！当選者: ${mentions}`);
+  await sourceMessage.reply(
+`🎉 Congratulations!!
+Winner: ${mentions}`
+  );
 }
 
 export async function rerollGiveaway(client: Client, giveawayId: string): Promise<string[]> {
