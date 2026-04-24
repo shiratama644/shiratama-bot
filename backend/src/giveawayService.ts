@@ -21,7 +21,7 @@ import { parseDeadline } from './deadline.js';
 export function giveawayButton(giveawayId: string, disabled = false): ActionRowBuilder<ButtonBuilder> {
   const button = new ButtonBuilder()
     .setCustomId(`giveaway:toggle:${giveawayId}`)
-    .setLabel('参加 / 退出')
+    .setLabel('Enter / Leave')
     .setStyle(ButtonStyle.Primary)
     .setDisabled(disabled);
 
@@ -39,9 +39,9 @@ export function giveawayEmbed(params: {
 }): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle(`🎁 ${params.title}`)
-    .setDescription(params.description ?? '説明なし')
+    .setDescription(params.description ?? 'No description provided.')
     .addFields(
-      { name: 'Ends'', value: `<t:${Math.floor(params.endAt.getTime() / 1000)}:F>`, inline: false },
+      { name: 'Ends', value: `<t:${Math.floor(params.endAt.getTime() / 1000)}:F>`, inline: false },
       { name: 'Winners', value: String(params.winnerCount), inline: true },
       { name: 'Entries', value: String(params.entries), inline: true },
       { name: 'Status', value: params.status === 'active' ? '🟢 Ongoing' : '🔴 Ended', inline: true }
@@ -76,11 +76,11 @@ export async function createGiveawayPost(params: {
 
   const channel = await params.client.channels.fetch(params.channelId);
   if (!channel || !(channel instanceof TextChannel)) {
-    throw new Error('投稿先チャンネルが見つかりません。');
+    throw new Error('Target channel not found.');
   }
 
   const message = await channel.send({
-    embeds: [
+    embeds:[
       giveawayEmbed({
         id: giveaway.id,
         title: giveaway.title,
@@ -91,7 +91,7 @@ export async function createGiveawayPost(params: {
         status: 'active'
       })
     ],
-    components: [giveawayButton(giveaway.id)]
+    components:[giveawayButton(giveaway.id)]
   });
 
   await setGiveawayMessageId(giveaway.id, message.id);
@@ -100,7 +100,7 @@ export async function createGiveawayPost(params: {
 
 function pickWinners(participants: string[], winnerCount: number): string[] {
   const copied = [...participants];
-  const winners: string[] = [];
+  const winners: string[] =[];
   while (copied.length > 0 && winners.length < winnerCount) {
     const index = Math.floor(Math.random() * copied.length);
     winners.push(copied[index]);
@@ -111,7 +111,9 @@ function pickWinners(participants: string[], winnerCount: number): string[] {
 
 export async function toggleEntryAndBuildMessage(giveawayId: string, userId: string): Promise<string> {
   const status = await toggleGiveawayEntry(giveawayId, userId);
-  return status === 'joined' ? '✅ You are now entered!' : '❌️ You have left.';
+  return status === 'joined'
+    ? '✅ **Success!**\nYou have successfully entered the giveaway.'
+    : '❌ **Left!**\nYou have left the giveaway.';
 }
 
 export async function refreshGiveawayMessage(client: Client, giveawayId: string): Promise<void> {
@@ -132,7 +134,7 @@ export async function refreshGiveawayMessage(client: Client, giveawayId: string)
 
   const entries = await countEntries(giveaway.id);
   await message.edit({
-    embeds: [
+    embeds:[
       giveawayEmbed({
         id: giveaway.id,
         title: giveaway.title,
@@ -175,21 +177,25 @@ export async function endGiveaway(client: Client, giveawayId: string): Promise<v
   await refreshGiveawayMessage(client, giveaway.id);
 
   if (winners.length === 0) {
-    await sourceMessage.reply('🎉 抽選の結果、参加者がいなかったため当選者はありませんでした。');
+    await sourceMessage.reply(
+      '🎉 **Giveaway Ended!**\n' +
+      'Unfortunately, there were no participants, so no winners could be selected.'
+    );
     return;
   }
 
   const mentions = winners.map((id) => userMention(id)).join(' ');
   await sourceMessage.reply(
-`🎉 Congratulations!!
-Winner: ${mentions}`
+    `🎉 **Giveaway Ended!**\n` +
+    `Congratulations to the winner(s): ${mentions}\n` +
+    `You have won **${giveaway.title}**!`
   );
 }
 
 export async function rerollGiveaway(client: Client, giveawayId: string): Promise<string[]> {
   const giveaway = await getGiveaway(giveawayId);
   if (!giveaway || !giveaway.messageId) {
-    throw new Error('ギブアウェイが見つかりません。');
+    throw new Error('Giveaway not found or message ID is missing.');
   }
 
   const participants = await listEntries(giveaway.id);
@@ -197,16 +203,23 @@ export async function rerollGiveaway(client: Client, giveawayId: string): Promis
 
   const channel = await client.channels.fetch(giveaway.channelId);
   if (!channel || !(channel instanceof TextChannel)) {
-    throw new Error('チャンネルが見つかりません。');
+    throw new Error('Channel not found or is not a text channel.');
   }
 
   const sourceMessage = await channel.messages.fetch(giveaway.messageId);
   if (winners.length === 0) {
-    await sourceMessage.reply('🔁 再抽選しましたが、参加者がいませんでした。');
-    return [];
+    await sourceMessage.reply(
+      '🔁 **Reroll Failed**\n' +
+      'There are no participants to choose from.'
+    );
+    return[];
   }
 
   const mentions = winners.map((id) => userMention(id)).join(' ');
-  await sourceMessage.reply(`🔁 再抽選結果: ${mentions}`);
+  await sourceMessage.reply(
+    `🔁 **Giveaway Rerolled!**\n` +
+    `The new winner(s): ${mentions}\n` +
+    `Congratulations!`
+  );
   return winners;
 }
