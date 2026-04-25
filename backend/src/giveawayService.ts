@@ -166,67 +166,80 @@ export async function refreshGiveawayMessage(client: Client, giveawayId: string)
   });
 }
 
+import { logger } from './utils/logger.js';
+
 export async function endGiveaway(client: Client, giveawayId: string): Promise<void> {
-  const giveaway = await getGiveaway(giveawayId);
-  if (!giveaway || giveaway.status === 'ended') {
-    return;
-  }
-
-  const participants = await listEntries(giveaway.id);
-  const winners = pickWinners(participants, giveaway.winnerCount);
-
-  await markGiveawayEnded(giveaway.id);
-
-  if (!giveaway.messageId) {
-    return;
-  }
-
-  const channel = await client.channels.fetch(giveaway.channelId);
-  if (!channel || !(channel instanceof TextChannel)) {
-    return;
-  }
-
-  const sourceMessage = await channel.messages.fetch(giveaway.messageId).catch(() => null);
-  if (!sourceMessage) {
-    return;
-  }
-
-  await refreshGiveawayMessage(client, giveaway.id);
-
-  if (winners.length === 0) {
-    await sourceMessage.reply(
-      '🎉 **Giveaway Ended!**\n' +
-      'Unfortunately, there were no participants, so no winners could be selected.'
-    );
-    return;
-  }
-
-  const mentions = winners.map((id) => userMention(id)).join(' ');
-  await sourceMessage.reply(
-    `🎉 **Giveaway Ended!**\n` +
-    `Congratulations to the winner(s): ${mentions}\n` +
-    `You have won **${giveaway.title}**!`
-  );
-
-  // Auto-repeat logic
-  if (giveaway.autoRepeat && giveaway.interval) {
-    try {
-      const nextEndAt = parseDeadline(giveaway.interval);
-      // We want to create it from "now" based on the interval
-      await createGiveawayPost({
-        client,
-        guildId: giveaway.guildId,
-        channelId: giveaway.channelId,
-        title: giveaway.title,
-        description: giveaway.description || undefined,
-        deadlineInput: giveaway.interval,
-        winnerCount: giveaway.winnerCount,
-        createdBy: giveaway.createdBy,
-        interval: giveaway.interval
-      });
-    } catch (e) {
-      console.error('Failed to auto-repeat giveaway:', e);
+  try {
+    const giveaway = await getGiveaway(giveawayId);
+    if (!giveaway) {
+      logger.warn(`Attempted to end non-existent giveaway: ${giveawayId}`);
+      return;
     }
+    if (giveaway.status === 'ended') {
+      return;
+    }
+
+    logger.info(`Ending giveaway: ${giveaway.title} (${giveawayId})`);
+
+    const participants = await listEntries(giveaway.id);
+    const winners = pickWinners(participants, giveaway.winnerCount);
+
+    await markGiveawayEnded(giveaway.id);
+
+    if (!giveaway.messageId) {
+      logger.warn(`Giveaway ${giveawayId} has no messageId`);
+      return;
+    }
+
+    const channel = await client.channels.fetch(giveaway.channelId).catch(() => null);
+    if (!channel || !(channel instanceof TextChannel)) {
+      logger.error(`Channel ${giveaway.channelId} not found or not a text channel for giveaway ${giveawayId}`);
+      return;
+    }
+
+    const sourceMessage = await channel.messages.fetch(giveaway.messageId).catch(() => null);
+    if (!sourceMessage) {
+      logger.warn(`Message ${giveaway.messageId} not found in channel ${giveaway.channelId}`);
+      return;
+    }
+
+    await refreshGiveawayMessage(client, giveaway.id).catch(err => logger.error(`Failed to refresh message for ${giveawayId}`, err));
+
+    if (winners.length === 0) {
+      await sourceMessage.reply(
+        '🎉 **Giveaway Ended!**\n' +
+        'Unfortunately, there were no participants, so no winners could be selected.'
+      ).catch(err => logger.error(`Failed to reply to message ${sourceMessage.id}`, err));
+    } else {
+      const mentions = winners.map((id) => userMention(id)).join(' ');
+      await sourceMessage.reply(
+        `🎉 **Giveaway Ended!**\n` +
+        `Congratulations to the winner(s): ${mentions}\n` +
+        `You have won **${giveaway.title}**!`
+      ).catch(err => logger.error(`Failed to reply to message ${sourceMessage.id}`, err));
+    }
+
+    // Auto-repeat logic
+    if (giveaway.autoRepeat && giveaway.interval) {
+      try {
+        logger.info(`Auto-repeating giveaway: ${giveaway.title} (${giveawayId})`);
+        await createGiveawayPost({
+          client,
+          guildId: giveaway.guildId,
+          channelId: giveaway.channelId,
+          title: giveaway.title,
+          description: giveaway.description || undefined,
+          deadlineInput: giveaway.interval,
+          winnerCount: giveaway.winnerCount,
+          createdBy: giveaway.createdBy,
+          interval: giveaway.interval
+        });
+      } catch (e) {
+        logger.error(`Failed to auto-repeat giveaway ${giveawayId}:`, e);
+      }
+    }
+  } catch (error) {
+    logger.error(`Unexpected error ending giveaway ${giveawayId}:`, error);
   }
 }
 

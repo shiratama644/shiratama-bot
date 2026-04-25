@@ -1,12 +1,21 @@
 import { Pool } from 'pg';
 import type { Giveaway } from './types.js';
+import { logger } from './utils/logger.js';
 
 let pool: Pool | null = null;
 
 function getPool(): Pool {
   if (pool === null) {
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      logger.error('DATABASE_URL is not defined in environment variables');
+      throw new Error('Database configuration error');
+    }
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL
+      connectionString
+    });
+    pool.on('error', (err) => {
+      logger.error('Unexpected error on idle database client', err);
     });
   }
   return pool;
@@ -31,8 +40,10 @@ function mapGiveaway(row: Record<string, unknown>): Giveaway {
 }
 
 export async function initSchema(): Promise<void> {
-  await getPool().query(`
-    CREATE TABLE IF NOT EXISTS guild_settings (
+  logger.info('Initializing database schema...');
+  try {
+    await getPool().query(`
+      CREATE TABLE IF NOT EXISTS guild_settings (
       guild_id TEXT PRIMARY KEY,
       manager_role_ids TEXT[] NOT NULL DEFAULT '{}'
     );
@@ -60,8 +71,13 @@ export async function initSchema(): Promise<void> {
       PRIMARY KEY (giveaway_id, user_id)
     );
 
-    CREATE INDEX IF NOT EXISTS idx_giveaways_active_end_at ON giveaways(status, end_at);
-  `);
+      CREATE INDEX IF NOT EXISTS idx_giveaways_active_end_at ON giveaways(status, end_at);
+    `);
+    logger.info('Database schema initialized successfully');
+  } catch (error) {
+    logger.error('Failed to initialize database schema', error);
+    throw error;
+  }
 }
 
 export async function getManagerRoleIds(guildId: string): Promise<string[]> {
