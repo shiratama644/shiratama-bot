@@ -24,7 +24,9 @@ function mapGiveaway(row: Record<string, unknown>): Giveaway {
     winnerCount: Number(row.winner_count),
     status: String(row.status) as Giveaway['status'],
     createdBy: String(row.created_by),
-    createdAt: new Date(String(row.created_at))
+    createdAt: new Date(String(row.created_at)),
+    interval: row.interval ? String(row.interval) : null,
+    autoRepeat: Boolean(row.auto_repeat)
   };
 }
 
@@ -44,9 +46,11 @@ export async function initSchema(): Promise<void> {
       description TEXT,
       end_at TIMESTAMPTZ NOT NULL,
       winner_count INTEGER NOT NULL CHECK (winner_count > 0),
-      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'ended')),
+      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'ended', 'stopped')),
       created_by TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      interval TEXT,
+      auto_repeat BOOLEAN NOT NULL DEFAULT FALSE
     );
 
     CREATE TABLE IF NOT EXISTS giveaway_entries (
@@ -90,11 +94,13 @@ export async function createGiveaway(params: {
   endAt: Date;
   winnerCount: number;
   createdBy: string;
+  interval: string | null;
+  autoRepeat: boolean;
 }): Promise<Giveaway> {
   const result = await getPool().query(
     `INSERT INTO giveaways (
-      id, guild_id, channel_id, title, description, end_at, winner_count, created_by
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      id, guild_id, channel_id, title, description, end_at, winner_count, created_by, interval, auto_repeat
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
     RETURNING *`,
     [
       params.id,
@@ -104,10 +110,25 @@ export async function createGiveaway(params: {
       params.description,
       params.endAt,
       params.winnerCount,
-      params.createdBy
+      params.createdBy,
+      params.interval,
+      params.autoRepeat
     ]
   );
   return mapGiveaway(result.rows[0] as Record<string, unknown>);
+}
+
+export async function updateGiveawayStatus(id: string, status: Giveaway['status']): Promise<void> {
+  await getPool().query('UPDATE giveaways SET status = $2 WHERE id = $1', [id, status]);
+}
+
+export async function updateGiveawayAutoRepeat(id: string, autoRepeat: boolean): Promise<void> {
+  await getPool().query('UPDATE giveaways SET auto_repeat = $2 WHERE id = $1', [id, autoRepeat]);
+}
+
+export async function listAllActiveGiveaways(): Promise<Giveaway[]> {
+  const result = await getPool().query(`SELECT * FROM giveaways WHERE status = 'active'`);
+  return result.rows.map((row: Record<string, unknown>) => mapGiveaway(row));
 }
 
 export async function setGiveawayMessageId(id: string, messageId: string): Promise<void> {

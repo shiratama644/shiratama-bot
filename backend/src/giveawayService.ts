@@ -14,7 +14,9 @@ import {
   listEntries,
   markGiveawayEnded,
   setGiveawayMessageId,
-  toggleGiveawayEntry
+  toggleGiveawayEntry,
+  updateGiveawayAutoRepeat,
+  updateGiveawayStatus
 } from './db.js';
 import { parseDeadline } from './deadline.js';
 
@@ -28,6 +30,8 @@ export function giveawayButton(giveawayId: string, disabled = false): ActionRowB
   return new ActionRowBuilder<ButtonBuilder>().addComponents(button);
 }
 
+import type { GiveawayStatus } from './types.js';
+
 export function giveawayEmbed(params: {
   id: string;
   title: string;
@@ -35,8 +39,18 @@ export function giveawayEmbed(params: {
   endAt: Date;
   winnerCount: number;
   entries: number;
-  status: 'active' | 'ended';
+  status: GiveawayStatus;
 }): EmbedBuilder {
+  let statusText = '🟢 Ongoing';
+  let color = 0x57f287;
+  if (params.status === 'ended') {
+    statusText = '🔴 Ended';
+    color = 0xed4245;
+  } else if (params.status === 'stopped') {
+    statusText = '🟡 Stopped';
+    color = 0xfee75c;
+  }
+
   const embed = new EmbedBuilder()
     .setTitle(`🎁 ${params.title}`)
     .setDescription(params.description ?? 'No description provided.')
@@ -44,9 +58,9 @@ export function giveawayEmbed(params: {
       { name: 'Ends', value: `<t:${Math.floor(params.endAt.getTime() / 1000)}:F>`, inline: false },
       { name: 'Winners', value: String(params.winnerCount), inline: true },
       { name: 'Entries', value: String(params.entries), inline: true },
-      { name: 'Status', value: params.status === 'active' ? '🟢 Ongoing' : '🔴 Ended', inline: true }
+      { name: 'Status', value: statusText, inline: true }
     )
-    .setColor(params.status === 'active' ? 0x57f287 : 0xed4245);
+    .setColor(color);
   return embed;
 }
 
@@ -59,6 +73,7 @@ export async function createGiveawayPost(params: {
   deadlineInput: string;
   winnerCount: number;
   createdBy: string;
+  interval?: string;
 }) {
   const endAt = parseDeadline(params.deadlineInput);
   const id = crypto.randomUUID();
@@ -71,7 +86,9 @@ export async function createGiveawayPost(params: {
     description: params.description?.trim() || null,
     endAt,
     winnerCount: Math.max(1, Math.floor(params.winnerCount)),
-    createdBy: params.createdBy
+    createdBy: params.createdBy,
+    interval: params.interval || null,
+    autoRepeat: !!params.interval
   });
 
   const channel = await params.client.channels.fetch(params.channelId);
@@ -190,6 +207,45 @@ export async function endGiveaway(client: Client, giveawayId: string): Promise<v
     `Congratulations to the winner(s): ${mentions}\n` +
     `You have won **${giveaway.title}**!`
   );
+
+  // Auto-repeat logic
+  if (giveaway.autoRepeat && giveaway.interval) {
+    try {
+      const nextEndAt = parseDeadline(giveaway.interval);
+      // We want to create it from "now" based on the interval
+      await createGiveawayPost({
+        client,
+        guildId: giveaway.guildId,
+        channelId: giveaway.channelId,
+        title: giveaway.title,
+        description: giveaway.description || undefined,
+        deadlineInput: giveaway.interval,
+        winnerCount: giveaway.winnerCount,
+        createdBy: giveaway.createdBy,
+        interval: giveaway.interval
+      });
+    } catch (e) {
+      console.error('Failed to auto-repeat giveaway:', e);
+    }
+  }
+}
+
+export async function stopGiveawayAutoRepeat(giveawayId: string): Promise<void> {
+  await updateGiveawayAutoRepeat(giveawayId, false);
+}
+
+export async function startGiveawayAutoRepeat(giveawayId: string): Promise<void> {
+  const giveaway = await getGiveaway(giveawayId);
+  if (giveaway && giveaway.interval) {
+    await updateGiveawayAutoRepeat(giveawayId, true);
+  } else {
+    throw new Error('This giveaway does not have an interval set.');
+  }
+}
+
+export async function stopGiveaway(client: Client, giveawayId: string): Promise<void> {
+  await updateGiveawayStatus(giveawayId, 'stopped');
+  await refreshGiveawayMessage(client, giveawayId);
 }
 
 export async function rerollGiveaway(client: Client, giveawayId: string): Promise<string[]> {

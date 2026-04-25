@@ -86,7 +86,8 @@ export function createApiServer(client: Client) {
         description: body.description,
         deadlineInput: body.deadline,
         winnerCount: body.winnerCount,
-        createdBy: body.userId
+        createdBy: body.userId,
+        interval: undefined // Web API can be extended later if needed
       });
       res.json({ giveaway: created });
     } catch (error) {

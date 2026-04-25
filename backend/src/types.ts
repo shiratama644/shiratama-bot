@@ -1,4 +1,4 @@
-export type GiveawayStatus = 'active' | 'ended';
+export type GiveawayStatus = 'active' | 'ended' | 'stopped';
 
 export interface Giveaway {
   id: string;
@@ -12,6 +12,8 @@ export interface Giveaway {
   status: GiveawayStatus;
   createdBy: string;
   createdAt: Date;
+  interval: string | null;
+  autoRepeat: boolean;
 }
 
 export interface GiveawayEntry {
