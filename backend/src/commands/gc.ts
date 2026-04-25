@@ -46,7 +46,7 @@ export const gcCommand: Command = {
       .setCustomId('winnerCount')
       .setLabel('当たり人数 (整数)')
       .setStyle(TextInputStyle.Short)
-      .setRequired(false)
+      .setRequired(true)
       .setValue('1');
 
     modal.addComponents(
