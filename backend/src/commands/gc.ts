@@ -1,64 +1,100 @@
-import { 
-  ChatInputCommandInteraction, 
-  Client, 
-  ModalBuilder, 
-  TextInputBuilder, 
-  TextInputStyle, 
-  ActionRowBuilder 
+import {
+    ChatInputCommandInteraction,
+    Client,
+    LabelBuilder,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } from 'discord.js';
 import { Command } from './index.js';
 import { assertCanManageGiveaways } from './permissions.js';
 
 export const gcCommand: Command = {
-  name: 'gc',
-  description: 'Giveaway作成フォームを開きます',
-  execute: async (client: Client, interaction: ChatInputCommandInteraction) => {
-    await assertCanManageGiveaways(interaction);
-    const modal = new ModalBuilder().setCustomId('giveaway:create').setTitle('Giveaway作成');
+    name: 'gc',
+    description: 'Giveaway作成フォームを開きます',
+    execute: async (client: Client, interaction: ChatInputCommandInteraction) => {
+        await assertCanManageGiveaways(interaction);
 
-    const titleInput = new TextInputBuilder()
-      .setCustomId('title')
-      .setLabel('題名 (必須)')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true)
-      .setMaxLength(100);
+        interaction.showModal(
+            new ModalBuilder()
+                .setTitle("Giveaway Create")
+                .setCustomId("giveaway:create")
+                .addLabelComponents(
+                    new LabelBuilder()
+                        .setLabel("Prize")
+                        .setTextInputComponent(
+                            new TextInputBuilder()
+                                .setCustomId("prize")
+                                .setStyle(TextInputStyle.Short)
+                                .setPlaceholder("10M etc..")
+                                .setMinLength(1)
+                        )
+                )
 
-    const descriptionInput = new TextInputBuilder()
-      .setCustomId('description')
-      .setLabel('説明')
-      .setStyle(TextInputStyle.Paragraph)
-      .setRequired(false)
-      .setMaxLength(500);
-
-    const deadlineInput = new TextInputBuilder()
-      .setCustomId('deadline')
-      .setLabel('期限 (必須: 2026/04/22, 10m, 10h, 5d)')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true)
-      .setPlaceholder('2026/01/01 または 10m');
-
-    const intervalInput = new TextInputBuilder()
-      .setCustomId('interval')
-      .setLabel('自動作成間隔 (例: 1d, 12h)')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false)
-      .setPlaceholder('空欄で自動作成なし');
-
-    const winnerCountInput = new TextInputBuilder()
-      .setCustomId('winnerCount')
-      .setLabel('当たり人数 (整数)')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true)
-      .setValue('1');
-
-    modal.addComponents(
-      new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
-      new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput),
-      new ActionRowBuilder<TextInputBuilder>().addComponents(deadlineInput),
-      new ActionRowBuilder<TextInputBuilder>().addComponents(intervalInput),
-      new ActionRowBuilder<TextInputBuilder>().addComponents(winnerCountInput)
-    );
-
-    await interaction.showModal(modal);
-  }
+                .addLabelComponents(
+                    new LabelBuilder()
+                        .setLabel("Auto Repeating")
+                        .setStringSelectMenuComponent(
+                            new StringSelectMenuBuilder()
+                                .setCustomId("autorep")
+                                .setMinValues(1)
+                                .setMaxValues(1)
+                                .addOptions(
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel("Disable")
+                                        .setValue("disabel"),
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel("Enable")
+                                        .setValue("enable")
+                                )
+                        )
+                )
+                .addLabelComponents(
+                    new LabelBuilder()
+                        .setLabel("Duration (Interval)")
+                        .setDescription("If Auto Repeating is enabled, you need to enter an Interval here.")
+                        .setTextInputComponent(
+                            new TextInputBuilder()
+                                .setCustomId("duration")
+                                .setStyle(TextInputStyle.Short)
+                                .setPlaceholder(">= 1m, 1h, 1d10m etc..")
+                                .setMinLength(1)
+                        )
+                )
+                .addLabelComponents(
+                    new LabelBuilder()
+                        .setLabel("Number of Winners")
+                        .setTextInputComponent(
+                            new TextInputBuilder()
+                                .setCustomId("winners")
+                                .setStyle(TextInputStyle.Short)
+                                .setPlaceholder("1")
+                                .setValue("1")
+                                .setMinLength(1)
+                        )
+                )
+                .addLabelComponents(
+                    new LabelBuilder()
+                        .setLabel("Claim Deadline")
+                        .setDescription("If you don't enter anything, the default settings will be applied.")
+                        .setTextInputComponent(
+                            new TextInputBuilder()
+                                .setCustomId("claim:deadline")
+                                .setStyle(TextInputStyle.Short)
+                                .setPlaceholder("def, 10m, 6h, 7d, 8w etc..")
+                                .setRequired(false)
+                        )
+                )
+                .addLabelComponents(
+                    new LabelBuilder()
+                        .setLabel("Description")
+                        .setTextInputComponent(
+                            new TextInputBuilder()
+                                .setCustomId("description")
+                                .setStyle(TextInputStyle.Paragraph)
+                                .setRequired(false)
+                        )
+                )
+        )
+    }
 };
