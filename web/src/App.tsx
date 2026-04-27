@@ -19,8 +19,7 @@ function App() {
   const [guildId, setGuildId] = useState(import.meta.env.VITE_GUILD_ID ?? '');
   const [channelId, setChannelId] = useState('');
   const [userId, setUserId] = useState('');
-  const [roleIds, setRoleIds] = useState('');
-  const [adminToken, setAdminToken] = useState(import.meta.env.VITE_ADMIN_TOKEN ?? '');
+  const [adminToken, setAdminToken] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [deadline, setDeadline] = useState('10m');
@@ -43,19 +42,14 @@ function App() {
 
     const res = await fetch(`${apiBase}/api/giveaways`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-user-id': userId, 'x-admin-token': adminToken },
       body: JSON.stringify({
         guildId,
         channelId,
         title,
         description,
         deadline,
-        winnerCount,
-        userId,
-        roleIds: roleIds
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean)
+        winnerCount
       })
     });
 
@@ -72,8 +66,10 @@ function App() {
     const res = await fetch(`${apiBase}${path}`, {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         'x-admin-token': adminToken
-      }
+      },
+      body: JSON.stringify({ guildId })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -100,10 +96,6 @@ function App() {
           <label>
             User ID
             <input value={userId} onChange={(e) => setUserId(e.target.value)} required />
-          </label>
-          <label>
-            User Role IDs (comma)
-            <input value={roleIds} onChange={(e) => setRoleIds(e.target.value)} />
           </label>
           <label>
             Admin Token

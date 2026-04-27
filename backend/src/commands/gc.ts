@@ -7,11 +7,13 @@ import {
   ActionRowBuilder 
 } from 'discord.js';
 import { Command } from './index.js';
+import { assertCanManageGiveaways } from './permissions.js';
 
 export const gcCommand: Command = {
   name: 'gc',
   description: 'Giveaway作成フォームを開きます',
   execute: async (client: Client, interaction: ChatInputCommandInteraction) => {
+    await assertCanManageGiveaways(interaction);
     const modal = new ModalBuilder().setCustomId('giveaway:create').setTitle('Giveaway作成');
 
     const titleInput = new TextInputBuilder()

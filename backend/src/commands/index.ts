@@ -1,11 +1,16 @@
-import { ChatInputCommandInteraction, Client } from 'discord.js';
+import type {
+  AutocompleteInteraction,
+  ChatInputCommandInteraction,
+  Client,
+  RESTPostAPIChatInputApplicationCommandsJSONBody
+} from 'discord.js';
 
 export interface Command {
   name: string;
   description: string;
-  options?: any[];
+  options?: RESTPostAPIChatInputApplicationCommandsJSONBody['options'];
   execute: (client: Client, interaction: ChatInputCommandInteraction) => Promise<void>;
-  autocomplete?: (interaction: any) => Promise<void>;
+  autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
 }
 
 import { gcCommand } from './gc.js';

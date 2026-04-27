@@ -2,6 +2,8 @@ import { ChatInputCommandInteraction, Client, AutocompleteInteraction } from 'di
 import { Command } from './index.js';
 import { endGiveaway } from '../giveawayService.js';
 import { getActiveGiveaways } from '../db.js';
+import { assertCanManageGiveaways } from './permissions.js';
+import { ensureGiveawayInGuild } from '../giveawayService.js';
 
 export const gendCommand: Command = {
   name: 'gend',
@@ -16,7 +18,12 @@ export const gendCommand: Command = {
     }
   ],
   execute: async (client: Client, interaction: ChatInputCommandInteraction) => {
+    await assertCanManageGiveaways(interaction);
+    if (!interaction.guildId) {
+      return;
+    }
     const id = interaction.options.getString('id', true);
+    await ensureGiveawayInGuild(id, interaction.guildId);
     await endGiveaway(client, id);
     await interaction.reply({ content: `Giveaway (${id}) を終了しました。`, ephemeral: true });
   },

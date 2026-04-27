@@ -2,6 +2,8 @@ import { ChatInputCommandInteraction, Client, AutocompleteInteraction } from 'di
 import { Command } from './index.js';
 import { startGiveawayAutoRepeat } from '../giveawayService.js';
 import { getActiveGiveaways } from '../db.js';
+import { assertCanManageGiveaways } from './permissions.js';
+import { ensureGiveawayInGuild } from '../giveawayService.js';
 
 export const gstartCommand: Command = {
   name: 'gstart',
@@ -16,7 +18,12 @@ export const gstartCommand: Command = {
     }
   ],
   execute: async (client: Client, interaction: ChatInputCommandInteraction) => {
+    await assertCanManageGiveaways(interaction);
+    if (!interaction.guildId) {
+      return;
+    }
     const id = interaction.options.getString('id', true);
+    await ensureGiveawayInGuild(id, interaction.guildId);
     await startGiveawayAutoRepeat(id);
     await interaction.reply({ content: `Giveaway (${id}) の自動作成を再開しました。`, ephemeral: true });
   },

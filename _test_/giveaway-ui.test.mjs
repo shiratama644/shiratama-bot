@@ -61,3 +61,18 @@ test('giveawayEmbed uses ended status styling and description when provided', ()
   const fields = embed.data.fields ?? [];
   assert.equal(fields[3].value, '終了');
 });
+
+test('giveawayEmbed uses stopped status styling', () => {
+  const embed = giveawayEmbed({
+    id: 'g2',
+    title: 'Stopped Giveaway',
+    endAt: new Date('2026-04-23T00:00:00.000Z'),
+    winnerCount: 1,
+    entries: 0,
+    status: 'stopped'
+  });
+
+  assert.equal(embed.data.color, 0xfee75c);
+  const fields = embed.data.fields ?? [];
+  assert.equal(fields[3].value, '停止中');
+});
