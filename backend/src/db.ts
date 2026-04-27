@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import type { Giveaway } from './types.js';
 import { logger } from './utils/logger.js';
+import { AppError } from './errors.js';
 
 let pool: Pool | null = null;
 
@@ -135,11 +136,17 @@ export async function createGiveaway(params: {
 }
 
 export async function updateGiveawayStatus(id: string, status: Giveaway['status']): Promise<void> {
-  await getPool().query('UPDATE giveaways SET status = $2 WHERE id = $1', [id, status]);
+  const result = await getPool().query('UPDATE giveaways SET status = $2 WHERE id = $1', [id, status]);
+  if ((result.rowCount ?? 0) === 0) {
+    throw new AppError('Giveawayが見つかりません。', 404);
+  }
 }
 
 export async function updateGiveawayAutoRepeat(id: string, autoRepeat: boolean): Promise<void> {
-  await getPool().query('UPDATE giveaways SET auto_repeat = $2 WHERE id = $1', [id, autoRepeat]);
+  const result = await getPool().query('UPDATE giveaways SET auto_repeat = $2 WHERE id = $1', [id, autoRepeat]);
+  if ((result.rowCount ?? 0) === 0) {
+    throw new AppError('Giveawayが見つかりません。', 404);
+  }
 }
 
 export async function listAllActiveGiveaways(): Promise<Giveaway[]> {
@@ -148,7 +155,10 @@ export async function listAllActiveGiveaways(): Promise<Giveaway[]> {
 }
 
 export async function setGiveawayMessageId(id: string, messageId: string): Promise<void> {
-  await getPool().query('UPDATE giveaways SET message_id = $2 WHERE id = $1', [id, messageId]);
+  const result = await getPool().query('UPDATE giveaways SET message_id = $2 WHERE id = $1', [id, messageId]);
+  if ((result.rowCount ?? 0) === 0) {
+    throw new AppError('Giveawayが見つかりません。', 404);
+  }
 }
 
 export async function getGiveaway(id: string): Promise<Giveaway | null> {
@@ -169,6 +179,16 @@ export async function getActiveGiveaways(guildId: string): Promise<Giveaway[]> {
   return result.rows.map((row: Record<string, unknown>) => mapGiveaway(row));
 }
 
+export async function getEndedGiveaways(guildId: string): Promise<Giveaway[]> {
+  const result = await getPool().query(
+    `SELECT * FROM giveaways
+     WHERE guild_id = $1 AND status = 'ended'
+     ORDER BY end_at DESC`,
+    [guildId]
+  );
+  return result.rows.map((row: Record<string, unknown>) => mapGiveaway(row));
+}
+
 export async function getDueGiveaways(now: Date): Promise<Giveaway[]> {
   const result = await getPool().query(
     `SELECT * FROM giveaways
@@ -180,10 +200,21 @@ export async function getDueGiveaways(now: Date): Promise<Giveaway[]> {
 }
 
 export async function markGiveawayEnded(id: string): Promise<void> {
-  await getPool().query(`UPDATE giveaways SET status = 'ended' WHERE id = $1`, [id]);
+  const result = await getPool().query(`UPDATE giveaways SET status = 'ended' WHERE id = $1`, [id]);
+  if ((result.rowCount ?? 0) === 0) {
+    throw new AppError('Giveawayが見つかりません。', 404);
+  }
 }
 
 export async function toggleGiveawayEntry(giveawayId: string, userId: string): Promise<'joined' | 'left'> {
+  const giveaway = await getGiveaway(giveawayId);
+  if (!giveaway) {
+    throw new AppError('Giveawayが見つかりません。', 404);
+  }
+  if (giveaway.status !== 'active') {
+    throw new AppError('このGiveawayは現在参加できません。', 409);
+  }
+
   const existing = await getPool().query(
     'SELECT 1 FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2',
     [giveawayId, userId]

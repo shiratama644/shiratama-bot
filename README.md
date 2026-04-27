@@ -31,6 +31,9 @@ React + Vue.js + Vite のWeb管理画面と、Node.js + Discord.js + PostgreSQL 
 cp backend/.env.example backend/.env
 ```
 
+管理API保護のため `ADMIN_API_TOKEN` は必須です。  
+ブラウザからAPIを利用する場合は必要に応じて `CORS_ORIGIN` を設定してください（例: `http://localhost:5173`）。
+
 `web/.env.example` も必要に応じて設定してください。
 
 ```bash

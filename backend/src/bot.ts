@@ -44,7 +44,9 @@ export function buildClient(token: string, appId: string, guildId?: string): Cli
       if (missed.length > 0) {
         logger.info(`Recovering ${missed.length} missed giveaways`);
         for (const giveaway of missed) {
-          await endGiveaway(client, giveaway.id);
+          await endGiveaway(client, giveaway.id).catch((error) => {
+            logger.error(`Failed to recover giveaway ${giveaway.id}`, error);
+          });
         }
       }
     } catch (error) {
@@ -55,7 +57,9 @@ export function buildClient(token: string, appId: string, guildId?: string): Cli
       try {
         const due = await getDueGiveaways(new Date());
         for (const giveaway of due) {
-          await endGiveaway(client, giveaway.id);
+          await endGiveaway(client, giveaway.id).catch((error) => {
+            logger.error(`Failed to end due giveaway ${giveaway.id}`, error);
+          });
         }
       } catch (error) {
         logger.error('Error in giveaway check interval:', error);
