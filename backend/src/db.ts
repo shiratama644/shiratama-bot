@@ -143,9 +143,9 @@ export async function setGuildSettings(guildId: string, settings: Partial<Omit<G
      VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (guild_id)
      DO UPDATE SET
-       manager_role_ids = COALESCE(EXCLUDED.manager_role_ids, guild_settings.manager_role_ids),
-       language = COALESCE(EXCLUDED.language, guild_settings.language),
-       giveaway_channel_ids = COALESCE(EXCLUDED.giveaway_channel_ids, guild_settings.giveaway_channel_ids),
+       manager_role_ids = EXCLUDED.manager_role_ids,
+       language = EXCLUDED.language,
+       giveaway_channel_ids = EXCLUDED.giveaway_channel_ids,
        default_claim_deadline = EXCLUDED.default_claim_deadline`,
     [
       guildId,
