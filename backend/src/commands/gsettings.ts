@@ -1,6 +1,18 @@
-import { ActionRowBuilder, ChatInputCommandInteraction, Client, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import {
+    ChannelSelectMenuBuilder,
+    ChannelType,
+    ChatInputCommandInteraction,
+    Client,
+    LabelBuilder,
+    ModalBuilder,
+    RoleSelectMenuBuilder,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
+    TextInputBuilder,
+    TextInputStyle
+} from 'discord.js';
 import { Command } from './index.js';
-import { getManagerRoleIds } from '../db.js';
+import { getGuildSettings } from '../db.js';
 import { assertCanManageGiveaways } from './permissions.js';
 
 export const gsettingsCommand: Command = {
@@ -9,12 +21,12 @@ export const gsettingsCommand: Command = {
     execute: async (client: Client, interaction: ChatInputCommandInteraction) => {
         await assertCanManageGiveaways(interaction);
         if (!interaction.guildId) return;
-        const roleIds = await getManagerRoleIds(interaction.guildId);
+        const settings = await getGuildSettings(interaction.guildId);
 
-        interaction.showModal(
+        await interaction.showModal(
             new ModalBuilder()
-                .setTitle("Modal")
-                .setCustomId("modal")
+                .setTitle("Giveaway Settings")
+                .setCustomId("giveaway:settings")
                 .addLabelComponents(
                     new LabelBuilder()
                         .setLabel("Language")
@@ -27,50 +39,47 @@ export const gsettingsCommand: Command = {
                                     new StringSelectMenuOptionBuilder()
                                         .setLabel("English")
                                         .setValue("en")
-                                        .setDefault(true),
+                                        .setDefault(settings.language === 'en'),
                                     new StringSelectMenuOptionBuilder()
                                         .setLabel("日本語")
                                         .setValue("ja")
+                                        .setDefault(settings.language === 'ja')
                                 )
                         )
                 )
                 .addLabelComponents(
                     new LabelBuilder()
-                        .setLabel("Who Can create a Giveaway")
+                        .setLabel("Who Can Create a Giveaway")
                         .setRoleSelectMenuComponent(
                             new RoleSelectMenuBuilder()
                                 .setCustomId("giveaway:who")
+                                .setMinValues(0)
+                                .setMaxValues(25)
                         )
                 )
                 .addLabelComponents(
                     new LabelBuilder()
-                        .setLabel("Where can we create a giveaway?")
+                        .setLabel("Where Can We Create a Giveaway?")
                         .setChannelSelectMenuComponent(
                             new ChannelSelectMenuBuilder()
                                 .setCustomId("giveaway:where")
-                                .setMinValues(1)
-                                .setChannelTypes([0])
+                                .setMinValues(0)
+                                .setMaxValues(25)
+                                .setChannelTypes([ChannelType.GuildText])
                         )
                 )
                 .addLabelComponents(
                     new LabelBuilder()
-                        .setLabel("Default claim deadline")
+                        .setLabel("Default Claim Deadline")
                         .setTextInputComponent(
                             new TextInputBuilder()
                                 .setCustomId("defclaim")
                                 .setStyle(TextInputStyle.Short)
                                 .setPlaceholder("10m, 1h, 3d, 1w")
-                                .setMinLength(1)
+                                .setRequired(false)
+                                .setValue(settings.defaultClaimDeadline ?? '')
                         )
                 )
-        )
-
-        if (roleIds.length > 0) {
-            roleIdsInput.setValue(roleIds.join(','));
-        }
-
-        modal.addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(roleIdsInput));
-
-        await interaction.showModal(modal);
+        );
     }
 };

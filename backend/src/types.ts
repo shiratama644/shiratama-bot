@@ -14,10 +14,20 @@ export interface Giveaway {
   createdAt: Date;
   interval: string | null;
   autoRepeat: boolean;
+  claimDeadline: string | null;
+  winners: string[];
 }
 
 export interface GiveawayEntry {
   giveawayId: string;
   userId: string;
   joinedAt: Date;
+}
+
+export interface GuildSettings {
+  guildId: string;
+  managerRoleIds: string[];
+  language: string;
+  giveawayChannelIds: string[];
+  defaultClaimDeadline: string | null;
 }

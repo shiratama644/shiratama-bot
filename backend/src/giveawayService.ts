@@ -3,6 +3,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   Client,
+  Colors,
   EmbedBuilder,
   TextChannel,
   userMention
@@ -14,6 +15,7 @@ import {
   listEntries,
   markGiveawayEnded,
   setGiveawayMessageId,
+  setGiveawayWinners,
   toggleGiveawayEntry,
   updateGiveawayAutoRepeat,
   updateGiveawayStatus
@@ -23,14 +25,25 @@ import { AppError } from './errors.js';
 import type { Giveaway, GiveawayStatus } from './types.js';
 import { logger } from './utils/logger.js';
 
-export function giveawayButton(giveawayId: string, disabled = false): ActionRowBuilder<ButtonBuilder> {
-  const button = new ButtonBuilder()
-    .setCustomId(`giveaway:toggle:${giveawayId}`)
-    .setLabel('参加 / 退出')
-    .setStyle(ButtonStyle.Primary)
-    .setDisabled(disabled);
+export function giveawayButtons(giveawayId: string, disabled = false): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`giveaway:toggle:${giveawayId}`)
+      .setEmoji('🎉')
+      .setLabel('Enter')
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(disabled),
+    new ButtonBuilder()
+      .setCustomId(`copy_id_${giveawayId}`)
+      .setLabel('Copy ID')
+      .setEmoji('📋')
+      .setStyle(ButtonStyle.Secondary)
+  );
+}
 
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(button);
+/** @deprecated Use giveawayButtons instead */
+export function giveawayButton(giveawayId: string, disabled = false): ActionRowBuilder<ButtonBuilder> {
+  return giveawayButtons(giveawayId, disabled);
 }
 
 export function giveawayEmbed(params: {
@@ -41,28 +54,50 @@ export function giveawayEmbed(params: {
   winnerCount: number;
   entries: number;
   status: GiveawayStatus;
+  createdBy: string;
+  winners?: string[];
+  interval?: string | null;
+  autoRepeat?: boolean;
+  claimDeadline?: string | null;
 }): EmbedBuilder {
-  let statusText = '開催中';
-  let color = 0x57f287;
-  if (params.status === 'ended') {
-    statusText = '終了';
-    color = 0xed4245;
-  } else if (params.status === 'stopped') {
-    statusText = '停止中';
-    color = 0xfee75c;
+  const isEnded = params.status !== 'active';
+  const color = params.status === 'active' ? Colors.Green : Colors.Red;
+  const endTimestamp = Math.floor(params.endAt.getTime() / 1000);
+  const winners = params.winners ?? [];
+
+  const descLines: string[] = [
+    `⏱️ **${isEnded ? 'Ended' : 'Ends'}:** <t:${endTimestamp}:R> (<t:${endTimestamp}:f>)`,
+    `🎙️ **Host:** <@${params.createdBy}>`,
+    `🎟️ **Entries:** ${params.entries}`,
+    `👑 **Winners:** ${!isEnded
+      ? String(params.winnerCount)
+      : (winners.length > 0
+          ? winners.map(id => `<@${id}>`).join(', ')
+          : 'No winners')
+    }`
+  ];
+
+  const effectiveClaimDeadline = params.claimDeadline && params.claimDeadline !== 'def'
+    ? params.claimDeadline
+    : null;
+  if (effectiveClaimDeadline) {
+    descLines.push(`⏰ **${isEnded ? 'Claim Deadline' : 'Claim Window'}:** \`${effectiveClaimDeadline}\` after end`);
   }
 
-  const embed = new EmbedBuilder()
-    .setTitle(`🎁 ${params.title}`)
-    .setDescription(params.description ?? '説明なし')
-    .addFields(
-      { name: '締切', value: `<t:${Math.floor(params.endAt.getTime() / 1000)}:F>`, inline: false },
-      { name: '当選人数', value: String(params.winnerCount), inline: true },
-      { name: '参加数', value: String(params.entries), inline: true },
-      { name: '状態', value: statusText, inline: true }
-    )
-    .setColor(color);
-  return embed;
+  if (params.autoRepeat && params.interval) {
+    descLines.push(`🔄 **Repeats:** Every \`${params.interval}\``);
+  }
+
+  if (params.description) {
+    descLines.push('', params.description);
+  }
+
+  return new EmbedBuilder()
+    .setColor(color)
+    .setAuthor({ name: params.title })
+    .setDescription(descLines.join('\n'))
+    .setFooter({ text: isEnded ? 'Ended' : 'Click 🎉 Enter to participate' })
+    .setTimestamp(params.endAt);
 }
 
 export async function createGiveawayPost(params: {
@@ -75,6 +110,7 @@ export async function createGiveawayPost(params: {
   winnerCount: number;
   createdBy: string;
   interval?: string;
+  claimDeadline?: string | null;
 }) {
   const endAt = parseDeadline(params.deadlineInput);
   const id = crypto.randomUUID();
@@ -89,7 +125,8 @@ export async function createGiveawayPost(params: {
     winnerCount: Math.max(1, Math.floor(params.winnerCount)),
     createdBy: params.createdBy,
     interval: params.interval || null,
-    autoRepeat: !!params.interval
+    autoRepeat: !!params.interval,
+    claimDeadline: params.claimDeadline || null
   });
 
   const channel = await params.client.channels.fetch(params.channelId);
@@ -106,10 +143,15 @@ export async function createGiveawayPost(params: {
         endAt: giveaway.endAt,
         winnerCount: giveaway.winnerCount,
         entries: 0,
-        status: 'active'
+        status: 'active',
+        createdBy: giveaway.createdBy,
+        winners: [],
+        interval: giveaway.interval,
+        autoRepeat: giveaway.autoRepeat,
+        claimDeadline: giveaway.claimDeadline
       })
     ],
-    components:[giveawayButton(giveaway.id)]
+    components:[giveawayButtons(giveaway.id)]
   });
 
   await setGiveawayMessageId(giveaway.id, message.id);
@@ -190,11 +232,15 @@ export async function refreshGiveawayMessage(client: Client, giveawayId: string)
         endAt: giveaway.endAt,
         winnerCount: giveaway.winnerCount,
         entries,
-        status: giveaway.status
+        status: giveaway.status,
+        createdBy: giveaway.createdBy,
+        winners: giveaway.winners,
+        interval: giveaway.interval,
+        autoRepeat: giveaway.autoRepeat,
+        claimDeadline: giveaway.claimDeadline
       })
     ],
-    // Disable the toggle button whenever status is not active (ended or stopped).
-    components: [giveawayButton(giveaway.id, giveaway.status !== 'active')]
+    components: [giveawayButtons(giveaway.id, giveaway.status !== 'active')]
   });
 }
 
@@ -210,6 +256,7 @@ export async function endGiveaway(client: Client, giveawayId: string): Promise<v
   const winners = pickWinners(participants, giveaway.winnerCount);
 
   await markGiveawayEnded(giveaway.id);
+  await setGiveawayWinners(giveaway.id, winners);
 
   if (!giveaway.messageId) {
     throw new AppError('Giveawayの元メッセージが見つかりません。', 404);
@@ -227,19 +274,18 @@ export async function endGiveaway(client: Client, giveawayId: string): Promise<v
 
   await refreshGiveawayMessage(client, giveaway.id);
 
-  if (winners.length === 0) {
-    await sourceMessage.reply(
-      '🎉 **Giveaway 終了**\n' +
-      '参加者がいないため、当選者は選ばれませんでした。'
-    );
-  } else {
-    const mentions = winners.map((id) => userMention(id)).join(' ');
-    await sourceMessage.reply(
-      `🎉 **Giveaway 終了**\n` +
-      `当選者: ${mentions}\n` +
-      `おめでとうございます！`
-    );
-  }
+  const endEmbed = new EmbedBuilder()
+    .setColor(Colors.Gold)
+    .setAuthor({ name: '🎉 Giveaway Ended' })
+    .setDescription(
+      winners.length === 0
+        ? '参加者がいないため、当選者は選ばれませんでした。'
+        : `Congratulations ${winners.map(id => userMention(id)).join(', ')}!\nPrize: **${giveaway.title}**`
+    )
+    .setFooter({ text: `Giveaway • ${giveaway.id}` })
+    .setTimestamp();
+
+  await sourceMessage.reply({ embeds: [endEmbed] });
 
   if (giveaway.autoRepeat && giveaway.interval) {
     logger.info(`Auto-repeating giveaway: ${giveaway.title} (${giveawayId})`);
@@ -252,7 +298,8 @@ export async function endGiveaway(client: Client, giveawayId: string): Promise<v
       deadlineInput: giveaway.interval,
       winnerCount: giveaway.winnerCount,
       createdBy: giveaway.createdBy,
-      interval: giveaway.interval
+      interval: giveaway.interval,
+      claimDeadline: giveaway.claimDeadline
     });
   }
 }
@@ -292,19 +339,23 @@ export async function rerollGiveaway(client: Client, giveawayId: string): Promis
   }
 
   const sourceMessage = await channel.messages.fetch(giveaway.messageId);
-  if (winners.length === 0) {
-    await sourceMessage.reply(
-      '🔁 **再抽選できませんでした**\n' +
-      '参加者がいないため、再抽選できません。'
-    );
-    return[];
+
+  const rerollEmbed = new EmbedBuilder()
+    .setColor(Colors.Blurple)
+    .setAuthor({ name: '🔁 Giveaway Rerolled' })
+    .setDescription(
+      winners.length === 0
+        ? '参加者がいないため、再抽選できません。'
+        : `New winner(s): ${winners.map(id => userMention(id)).join(', ')}\nPrize: **${giveaway.title}**`
+    )
+    .setFooter({ text: `Giveaway • ${giveaway.id}` })
+    .setTimestamp();
+
+  await sourceMessage.reply({ embeds: [rerollEmbed] });
+
+  if (winners.length > 0) {
+    await setGiveawayWinners(giveaway.id, winners);
   }
 
-  const mentions = winners.map((id) => userMention(id)).join(' ');
-  await sourceMessage.reply(
-    `🔁 **Giveaway 再抽選**\n` +
-    `新しい当選者: ${mentions}\n` +
-    `おめでとうございます！`
-  );
   return winners;
 }
