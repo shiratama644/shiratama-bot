@@ -61,8 +61,38 @@
    - 実行環境依存のノイズであり、差分汚染や情報露出の要因になる。
 
 13. **ロックファイル運用が混在している**
-   - `pnpm-lock.yaml` と `package-lock.json` が共存している。
-   - パッケージマネージャ運用が二重化し、依存再現性やCI運用の混乱要因になる。
+    - `pnpm-lock.yaml` と `package-lock.json` が共存している。
+    - パッケージマネージャ運用が二重化し、依存再現性やCI運用の混乱要因になる。
+
+## 5. 追加で確認した重要課題（今後の修正向け）
+
+14. **Web API の権限制御がクライアント自己申告値を信用している**
+    - `POST /api/giveaways` は `userId` と `roleIds` をリクエストボディから受け取り、そのまま権限判定に使っている。
+    - サーバー側で Discord 実ユーザー情報を照合していないため、`roleIds` の偽装や `userId` なりすましで作成制御を回避できる。
+
+15. **ギルド境界チェック不足により他ギルドの Giveaway を操作できる**
+    - `/gend`, `/gstart`, `/gstop`, `/greroll` は ID 文字列だけで操作し、対象 Giveaway の `guildId` と実行ギルドの一致確認をしていない。
+    - API 側の `POST /api/giveaways/:id/end` と `POST /api/giveaways/:id/reroll` も同様に ID 単独指定で、ギルドスコープ検証がない。
+
+16. **更新系DB処理が「対象なし」を検知しない**
+    - `updateGiveawayStatus`, `updateGiveawayAutoRepeat`, `setGiveawayMessageId`, `markGiveawayEnded` は `UPDATE` の結果件数を見ていない。
+    - 不正IDでも成功扱いで上位層へ返るため、UI/コマンド上で成功メッセージと実データ状態が乖離しやすい。
+
+17. **`endGiveaway` が失敗を握りつぶすため呼び出し元が誤成功表示しやすい**
+    - `endGiveaway` は内部で広く `try/catch` し、例外を投げずにログのみで `return` する分岐が多い。
+    - `/gend` や API の終了処理は戻り値だけ見て成功応答するため、実際には終了できていなくても成功に見えるケースがある。
+
+18. **`/greroll` が「終了済みのみ」を強制していない**
+    - 説明文は終了 Giveaway 向けだが、`rerollGiveaway` では `status === 'ended'` のチェックが無い。
+    - 実装上は開催中 Giveaway でも再抽選メッセージを出せてしまう。
+
+19. **エラー分類が粗く、運用時の原因切り分けが難しい**
+    - API は認証失敗・権限不足・入力不正・内部失敗をほぼ一律 `400` で返している。
+    - クライアント/監視側で「ユーザー起因かサーバー起因か」を判別しづらい。
+
+20. **テスト範囲が狭く、重要フローの回 regress を防ぎにくい**
+    - 現在のテストは `_test_/deadline.test.mjs` と `_test_/giveaway-ui.test.mjs` の2ファイルのみ。
+    - API 認可、コマンド権限制御、DB更新、インタラクション統合など主要フローに自動テストが無い。
 
 ## 補足
 
