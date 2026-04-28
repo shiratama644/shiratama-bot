@@ -15,7 +15,7 @@ export function buildClient(token: string, appId: string, guildId?: string): Cli
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
   });
 
-  client.once('ready', async () => {
+  client.once('clientReady', async () => {
     logger.info(`Logged in as ${client.user?.tag}`);
 
     const rest = new REST({ version: '10' }).setToken(token);
