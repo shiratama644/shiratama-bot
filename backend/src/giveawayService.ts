@@ -36,6 +36,20 @@ function parseDurationSeconds(duration: string): number {
   return 0;
 }
 
+function formatWinnerMentions(winners: string[]): string {
+  return winners.map(id => userMention(id)).join(', ');
+}
+
+function calculateClaimDeadlineTimestamp(giveaway: { endAt: Date; claimDeadline: string | null }): number | null {
+  const claimDeadlineText = giveaway.claimDeadline && giveaway.claimDeadline !== 'def'
+    ? giveaway.claimDeadline
+    : null;
+  if (!claimDeadlineText) return null;
+  const claimDeadlineSecs = parseDurationSeconds(claimDeadlineText);
+  if (claimDeadlineSecs <= 0) return null;
+  return Math.floor(giveaway.endAt.getTime() / 1000) + claimDeadlineSecs;
+}
+
 export function giveawayButtons(giveawayId: string, disabled = false): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
@@ -291,19 +305,14 @@ export async function endGiveaway(client: Client, giveawayId: string, manualEnd 
 
   await refreshGiveawayMessage(client, giveaway.id);
 
-  const endTimestamp = Math.floor(giveaway.endAt.getTime() / 1000);
-  const claimDeadlineText = giveaway.claimDeadline && giveaway.claimDeadline !== 'def'
-    ? giveaway.claimDeadline
-    : null;
-  const claimDeadlineSecs = claimDeadlineText ? parseDurationSeconds(claimDeadlineText) : 0;
-  const claimDeadlineTs = claimDeadlineSecs > 0 ? endTimestamp + claimDeadlineSecs : null;
+  const claimDeadlineTs = calculateClaimDeadlineTimestamp(giveaway);
 
   let endContent: string;
   if (winners.length === 0) {
     endContent = `参加者がいないため、当選者は選ばれませんでした。\nPrize: **${giveaway.title}**`;
   } else {
     const lines = [
-      `Congratulations ${winners.map(id => userMention(id)).join(', ')}!`,
+      `Congratulations ${formatWinnerMentions(winners)}!`,
       `Prize: **${giveaway.title}**`
     ];
     if (claimDeadlineTs) {
@@ -320,9 +329,12 @@ export async function endGiveaway(client: Client, giveawayId: string, manualEnd 
       .setAuthor({ name: 'Claim Your Prize' })
       .setTitle('🎫 Claim Your Prize')
       .setDescription([
-        `Congratulations ${winners.map(id => userMention(id)).join(', ')}!\n`,
-        'Click 🎫 **Claim Prize** to open a private channel where staff will deliver your prize.\n',
-        `⏰ **Claim by:** <t:${claimDeadlineTs}:R> (<t:${claimDeadlineTs}:f>)\n`,
+        `Congratulations ${formatWinnerMentions(winners)}!`,
+        '',
+        'Click 🎫 **Claim Prize** to open a private channel where staff will deliver your prize.',
+        '',
+        `⏰ **Claim by:** <t:${claimDeadlineTs}:R> (<t:${claimDeadlineTs}:f>)`,
+        '',
         '**Prize**',
         giveaway.title
       ].join('\n'))
@@ -392,19 +404,14 @@ export async function rerollGiveaway(client: Client, giveawayId: string): Promis
 
   const sourceMessage = await channel.messages.fetch(giveaway.messageId);
 
-  const endTimestamp = Math.floor(giveaway.endAt.getTime() / 1000);
-  const claimDeadlineText = giveaway.claimDeadline && giveaway.claimDeadline !== 'def'
-    ? giveaway.claimDeadline
-    : null;
-  const claimDeadlineSecs = claimDeadlineText ? parseDurationSeconds(claimDeadlineText) : 0;
-  const claimDeadlineTs = claimDeadlineSecs > 0 ? endTimestamp + claimDeadlineSecs : null;
+  const claimDeadlineTs = calculateClaimDeadlineTimestamp(giveaway);
 
   let rerollContent: string;
   if (winners.length === 0) {
     rerollContent = '参加者がいないため、再抽選できません。';
   } else {
     const lines = [
-      `New winner(s): ${winners.map(id => userMention(id)).join(', ')}!`,
+      `New winner(s): ${formatWinnerMentions(winners)}!`,
       `Prize: **${giveaway.title}**`
     ];
     if (claimDeadlineTs) {
