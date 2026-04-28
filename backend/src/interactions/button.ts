@@ -12,6 +12,14 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
     return;
   }
 
+  if (interaction.customId.startsWith('claim_prize_')) {
+    await interaction.reply({
+      content: '🎫 クレームリクエストを受け付けました。スタッフが確認後、プライベートチャンネルを作成します。',
+      ephemeral: true
+    });
+    return;
+  }
+
   if (interaction.customId.startsWith('giveaway:toggle:')) {
     const giveawayId = interaction.customId.split(':')[2];
     
