@@ -1,6 +1,6 @@
 import { ModalSubmitInteraction, Client } from 'discord.js';
 import { createGiveawayPost } from '../giveawayService.js';
-import { setGuildSettings } from '../db.js';
+import { getGuildSettings, setGuildSettings } from '../db.js';
 import { logger } from '../utils/logger.js';
 
 export async function handleModalSubmit(client: Client, interaction: ModalSubmitInteraction) {
@@ -12,12 +12,13 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     const autoRep = autoRepValues[0] === 'enable';
     const winnerCountRaw = interaction.fields.getTextInputValue('winners');
     const winnerCount = Number.parseInt(winnerCountRaw || '1', 10);
-    const claimDeadlineRaw = interaction.fields.getTextInputValue('claim:deadline');
-    const claimDeadline = claimDeadlineRaw.trim() || null;
 
     if (!interaction.guildId || !interaction.channelId) {
       throw new Error('サーバー内テキストチャンネルで実行してください。');
     }
+
+    const settings = await getGuildSettings(interaction.guildId);
+    const claimDeadline = settings.defaultClaimDeadline ?? null;
 
     logger.info(`Creating giveaway: ${title} in guild ${interaction.guildId}`);
 

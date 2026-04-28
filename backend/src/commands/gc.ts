@@ -77,18 +77,6 @@ export const gcCommand: Command = {
                 )
                 .addLabelComponents(
                     new LabelBuilder()
-                        .setLabel("Claim Deadline")
-                        .setDescription("If you don't enter anything, the default settings will be applied.")
-                        .setTextInputComponent(
-                            new TextInputBuilder()
-                                .setCustomId("claim:deadline")
-                                .setStyle(TextInputStyle.Short)
-                                .setPlaceholder("def, 10m, 6h, 7d, 8w etc..")
-                                .setRequired(false)
-                        )
-                )
-                .addLabelComponents(
-                    new LabelBuilder()
                         .setLabel("Description")
                         .setTextInputComponent(
                             new TextInputBuilder()
