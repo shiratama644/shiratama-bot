@@ -25,6 +25,31 @@ import { AppError } from './errors.js';
 import type { Giveaway, GiveawayStatus } from './types.js';
 import { logger } from './utils/logger.js';
 
+function parseDurationSeconds(duration: string): number {
+  const match = duration.trim().match(/^(\d+)(m|h|d)$/i);
+  if (!match) return 0;
+  const amount = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  if (unit === 'm') return amount * 60;
+  if (unit === 'h') return amount * 3600;
+  if (unit === 'd') return amount * 86400;
+  return 0;
+}
+
+function formatWinnerMentions(winners: string[]): string {
+  return winners.map(id => userMention(id)).join(', ');
+}
+
+function calculateClaimDeadlineTimestamp(giveaway: { endAt: Date; claimDeadline: string | null }): number | null {
+  const claimDeadlineText = giveaway.claimDeadline && giveaway.claimDeadline !== 'def'
+    ? giveaway.claimDeadline
+    : null;
+  if (!claimDeadlineText) return null;
+  const claimDeadlineSecs = parseDurationSeconds(claimDeadlineText);
+  if (claimDeadlineSecs <= 0) return null;
+  return Math.floor(giveaway.endAt.getTime() / 1000) + claimDeadlineSecs;
+}
+
 export function giveawayButtons(giveawayId: string, disabled = false): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
@@ -81,7 +106,13 @@ export function giveawayEmbed(params: {
     ? params.claimDeadline
     : null;
   if (effectiveClaimDeadline) {
-    descLines.push(`⏰ **${isEnded ? 'Claim Deadline' : 'Claim Window'}:** \`${effectiveClaimDeadline}\` after end`);
+    if (isEnded) {
+      const claimDeadlineSecs = parseDurationSeconds(effectiveClaimDeadline);
+      const claimDeadlineTs = endTimestamp + claimDeadlineSecs;
+      descLines.push(`⏰ **Claim Deadline:** <t:${claimDeadlineTs}:R> (<t:${claimDeadlineTs}:f>)`);
+    } else {
+      descLines.push(`⏰ **Claim Window:** \`${effectiveClaimDeadline}\` after end`);
+    }
   }
 
   if (params.autoRepeat && params.interval) {
@@ -244,7 +275,7 @@ export async function refreshGiveawayMessage(client: Client, giveawayId: string)
   });
 }
 
-export async function endGiveaway(client: Client, giveawayId: string): Promise<void> {
+export async function endGiveaway(client: Client, giveawayId: string, manualEnd = false): Promise<void> {
   const giveaway = await getGiveawayOrThrow(giveawayId);
   if (giveaway.status === 'ended') {
     throw new AppError('このGiveawayはすでに終了しています。', 409);
@@ -274,20 +305,53 @@ export async function endGiveaway(client: Client, giveawayId: string): Promise<v
 
   await refreshGiveawayMessage(client, giveaway.id);
 
-  const endEmbed = new EmbedBuilder()
-    .setColor(Colors.Gold)
-    .setAuthor({ name: '🎉 Giveaway Ended' })
-    .setDescription(
-      winners.length === 0
-        ? '参加者がいないため、当選者は選ばれませんでした。'
-        : `Congratulations ${winners.map(id => userMention(id)).join(', ')}!\nPrize: **${giveaway.title}**`
-    )
-    .setFooter({ text: `Giveaway • ${giveaway.id}` })
-    .setTimestamp();
+  const claimDeadlineTs = calculateClaimDeadlineTimestamp(giveaway);
 
-  await sourceMessage.reply({ embeds: [endEmbed] });
+  let endContent: string;
+  if (winners.length === 0) {
+    endContent = `参加者がいないため、当選者は選ばれませんでした。\nPrize: **${giveaway.title}**`;
+  } else {
+    const lines = [
+      `Congratulations ${formatWinnerMentions(winners)}!`,
+      `Prize: **${giveaway.title}**`
+    ];
+    if (claimDeadlineTs) {
+      lines.push(`Claim deadline: <t:${claimDeadlineTs}:R> (<t:${claimDeadlineTs}:f>)`);
+    }
+    endContent = lines.join('\n');
+  }
 
-  if (giveaway.autoRepeat && giveaway.interval) {
+  await sourceMessage.reply({ content: endContent });
+
+  if (winners.length > 0 && claimDeadlineTs) {
+    const claimEmbed = new EmbedBuilder()
+      .setColor(Colors.Green)
+      .setAuthor({ name: 'Claim Your Prize' })
+      .setTitle('🎫 Claim Your Prize')
+      .setDescription([
+        `Congratulations ${formatWinnerMentions(winners)}!`,
+        '',
+        'Click 🎫 **Claim Prize** to open a private channel where staff will deliver your prize.',
+        '',
+        `⏰ **Claim by:** <t:${claimDeadlineTs}:R> (<t:${claimDeadlineTs}:f>)`,
+        '',
+        '**Prize**',
+        giveaway.title
+      ].join('\n'))
+      .setFooter({ text: `Claim • ${giveaway.id}` });
+
+    const claimRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`claim_prize_${giveaway.id}`)
+        .setLabel('Claim Prize')
+        .setEmoji('🎫')
+        .setStyle(ButtonStyle.Success)
+    );
+
+    await sourceMessage.reply({ embeds: [claimEmbed], components: [claimRow] });
+  }
+
+  if (!manualEnd && giveaway.autoRepeat && giveaway.interval) {
     logger.info(`Auto-repeating giveaway: ${giveaway.title} (${giveawayId})`);
     await createGiveawayPost({
       client,
@@ -340,18 +404,23 @@ export async function rerollGiveaway(client: Client, giveawayId: string): Promis
 
   const sourceMessage = await channel.messages.fetch(giveaway.messageId);
 
-  const rerollEmbed = new EmbedBuilder()
-    .setColor(Colors.Blurple)
-    .setAuthor({ name: '🔁 Giveaway Rerolled' })
-    .setDescription(
-      winners.length === 0
-        ? '参加者がいないため、再抽選できません。'
-        : `New winner(s): ${winners.map(id => userMention(id)).join(', ')}\nPrize: **${giveaway.title}**`
-    )
-    .setFooter({ text: `Giveaway • ${giveaway.id}` })
-    .setTimestamp();
+  const claimDeadlineTs = calculateClaimDeadlineTimestamp(giveaway);
 
-  await sourceMessage.reply({ embeds: [rerollEmbed] });
+  let rerollContent: string;
+  if (winners.length === 0) {
+    rerollContent = '参加者がいないため、再抽選できません。';
+  } else {
+    const lines = [
+      `New winner(s): ${formatWinnerMentions(winners)}!`,
+      `Prize: **${giveaway.title}**`
+    ];
+    if (claimDeadlineTs) {
+      lines.push(`Claim deadline: <t:${claimDeadlineTs}:R> (<t:${claimDeadlineTs}:f>)`);
+    }
+    rerollContent = lines.join('\n');
+  }
+
+  await sourceMessage.reply({ content: rerollContent });
 
   if (winners.length > 0) {
     await setGiveawayWinners(giveaway.id, winners);

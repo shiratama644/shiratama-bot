@@ -24,7 +24,7 @@ export const gendCommand: Command = {
     }
     const id = interaction.options.getString('id', true);
     await ensureGiveawayInGuild(id, interaction.guildId);
-    await endGiveaway(client, id);
+    await endGiveaway(client, id, true);
     await interaction.reply({ content: `Giveaway (${id}) を終了しました。`, ephemeral: true });
   },
   autocomplete: async (interaction: AutocompleteInteraction) => {
