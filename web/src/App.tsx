@@ -154,6 +154,7 @@ function App() {
               <div>{g.description ?? '説明なし'}</div>
               <div className="actions">
                 <button
+                  className="danger"
                   onClick={() => {
                     void withAdmin(`/api/giveaways/${g.id}/end`).catch((error: unknown) => {
                       setMessage(error instanceof Error ? error.message : 'エラー');
