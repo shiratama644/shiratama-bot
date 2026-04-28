@@ -53,7 +53,7 @@ export const gsettingsCommand: Command = {
                         .setRoleSelectMenuComponent(
                             new RoleSelectMenuBuilder()
                                 .setCustomId("giveaway:who")
-                                .setMinValues(0)
+                                .setMinValues(1)
                                 .setMaxValues(25)
                         )
                 )
@@ -63,7 +63,7 @@ export const gsettingsCommand: Command = {
                         .setChannelSelectMenuComponent(
                             new ChannelSelectMenuBuilder()
                                 .setCustomId("giveaway:where")
-                                .setMinValues(0)
+                                .setMinValues(1)
                                 .setMaxValues(25)
                                 .setChannelTypes([ChannelType.GuildText])
                         )
