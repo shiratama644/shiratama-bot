@@ -5,19 +5,23 @@ import { giveawayButton, giveawayEmbed } from '../backend/dist/giveawayService.j
 
 test('giveawayButton builds primary button with giveaway custom id', () => {
   const row = giveawayButton('g1');
-  const button = row.components[0];
+  const enterButton = row.components[0];
+  const copyButton = row.components[1];
 
-  assert.equal(button.data.custom_id, 'giveaway:toggle:g1');
-  assert.equal(button.data.label, '参加 / 退出');
-  assert.equal(button.data.style, 1);
-  assert.equal(button.data.disabled, false);
+  assert.equal(enterButton.data.custom_id, 'giveaway:toggle:g1');
+  assert.equal(enterButton.data.label, 'Enter');
+  assert.equal(enterButton.data.style, 1);
+  assert.equal(enterButton.data.disabled, false);
+
+  assert.equal(copyButton.data.custom_id, 'copy_id_g1');
+  assert.equal(copyButton.data.label, 'Copy ID');
 });
 
 test('giveawayButton supports disabled state', () => {
   const row = giveawayButton('g1', true);
-  const button = row.components[0];
+  const enterButton = row.components[0];
 
-  assert.equal(button.data.disabled, true);
+  assert.equal(enterButton.data.disabled, true);
 });
 
 test('giveawayEmbed includes defaults and active status styling', () => {
@@ -28,20 +32,20 @@ test('giveawayEmbed includes defaults and active status styling', () => {
     endAt,
     winnerCount: 2,
     entries: 5,
-    status: 'active'
+    status: 'active',
+    createdBy: 'host123'
   });
 
-  assert.equal(embed.data.title, '🎁 Sample');
-  assert.equal(embed.data.description, '説明なし');
+  assert.equal(embed.data.author?.name, 'Sample');
+  assert.equal(embed.data.title, undefined);
   assert.equal(embed.data.color, 0x57f287);
 
-  const fields = embed.data.fields ?? [];
-  assert.equal(fields.length, 4);
-  assert.equal(fields[0].name, '締切');
-  assert.equal(fields[0].value, `<t:${Math.floor(endAt.getTime() / 1000)}:F>`);
-  assert.equal(fields[1].value, '2');
-  assert.equal(fields[2].value, '5');
-  assert.equal(fields[3].value, '開催中');
+  const ts = Math.floor(endAt.getTime() / 1000);
+  assert.ok(embed.data.description?.includes(`<t:${ts}:R>`));
+  assert.ok(embed.data.description?.includes('<@host123>'));
+  assert.ok(embed.data.description?.includes('**Entries:** 5'));
+  assert.ok(embed.data.description?.includes('**Winners:** 2'));
+  assert.equal(embed.data.footer?.text, 'Click 🎉 Enter to participate');
 });
 
 test('giveawayEmbed uses ended status styling and description when provided', () => {
@@ -52,14 +56,13 @@ test('giveawayEmbed uses ended status styling and description when provided', ()
     endAt: new Date('2026-04-22T00:00:00.000Z'),
     winnerCount: 1,
     entries: 1,
-    status: 'ended'
+    status: 'ended',
+    createdBy: 'host123'
   });
 
-  assert.equal(embed.data.description, 'final');
+  assert.ok(embed.data.description?.endsWith('final'));
   assert.equal(embed.data.color, 0xed4245);
-
-  const fields = embed.data.fields ?? [];
-  assert.equal(fields[3].value, '終了');
+  assert.equal(embed.data.footer?.text, 'Ended');
 });
 
 test('giveawayEmbed uses stopped status styling', () => {
@@ -69,10 +72,9 @@ test('giveawayEmbed uses stopped status styling', () => {
     endAt: new Date('2026-04-23T00:00:00.000Z'),
     winnerCount: 1,
     entries: 0,
-    status: 'stopped'
+    status: 'stopped',
+    createdBy: 'host123'
   });
 
-  assert.equal(embed.data.color, 0xfee75c);
-  const fields = embed.data.fields ?? [];
-  assert.equal(fields[3].value, '停止中');
+  assert.equal(embed.data.color, 0xed4245);
 });

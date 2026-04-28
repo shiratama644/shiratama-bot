@@ -3,6 +3,8 @@ import {
     Client,
     LabelBuilder,
     ModalBuilder,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
     TextInputBuilder,
     TextInputStyle
 } from 'discord.js';
@@ -42,7 +44,7 @@ export const gcCommand: Command = {
                                 .addOptions(
                                     new StringSelectMenuOptionBuilder()
                                         .setLabel("Disable")
-                                        .setValue("disabel"),
+                                        .setValue("disable"),
                                     new StringSelectMenuOptionBuilder()
                                         .setLabel("Enable")
                                         .setValue("enable")

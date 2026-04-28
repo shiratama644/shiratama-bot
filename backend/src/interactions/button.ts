@@ -3,6 +3,15 @@ import { ensureGiveawayIsActive, toggleEntryAndBuildMessage, refreshGiveawayMess
 import { logger } from '../utils/logger.js';
 
 export async function handleButton(client: Client, interaction: ButtonInteraction) {
+  if (interaction.customId.startsWith('copy_id_')) {
+    const id = interaction.customId.slice('copy_id_'.length);
+    await interaction.reply({
+      content: `📋 **Giveaway ID:** \`${id}\``,
+      ephemeral: true
+    });
+    return;
+  }
+
   if (interaction.customId.startsWith('giveaway:toggle:')) {
     const giveawayId = interaction.customId.split(':')[2];
     
