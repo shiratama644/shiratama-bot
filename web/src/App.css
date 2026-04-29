@@ -1,78 +1,244 @@
+/* ───── Discord Glassmorphism Design ───── */
 :root {
-  font-family: Inter, sans-serif;
-  color: #e5e7eb;
-  background: #111827;
+  font-family: 'Inter', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  color: #dcddde;
+
+  /* Discord palette */
+  --dc-bg-primary:     #313338;
+  --dc-bg-secondary:   #2b2d31;
+  --dc-bg-tertiary:    #1e1f22;
+  --dc-bg-floating:    #111214;
+  --dc-blurple:        #5865f2;
+  --dc-blurple-hover:  #4752c4;
+  --dc-blurple-active: #3c45a5;
+  --dc-green:          #23a559;
+  --dc-red:            #ed4245;
+  --dc-text-normal:    #dcddde;
+  --dc-text-muted:     #a3a6aa;
+  --dc-text-link:      #00aff4;
+  --dc-header-primary: #f2f3f5;
+  --dc-interactive-hover: #dbdee1;
+  --dc-border:         rgba(255, 255, 255, 0.06);
+  --dc-border-hover:   rgba(255, 255, 255, 0.14);
+
+  /* Glass */
+  --glass-bg:     rgba(43, 45, 49, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur:   16px;
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-body {
-  margin: 0;
-}
-
+/* ───── Layout ───── */
 .container {
-  max-width: 900px;
+  max-width: 920px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
+h1 {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--dc-header-primary);
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 12px rgba(88, 101, 242, 0.4);
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dc-text-muted);
+}
+
+/* ───── Glass Panel ───── */
 .panel {
-  background: #1f2937;
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 20px 24px;
+  box-shadow: var(--glass-shadow);
+  transition: border-color 0.2s;
 }
 
+.panel:hover {
+  border-color: var(--dc-border-hover);
+}
+
+/* ───── Grid ───── */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
+  gap: 12px;
+  align-items: end;
 }
 
+/* ───── Labels ───── */
 label {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--dc-text-muted);
 }
 
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid #374151;
-  padding: 8px;
-  background: #0f172a;
-  color: #e5e7eb;
+/* ───── Inputs ───── */
+input {
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+  background: rgba(30, 31, 34, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--dc-text-normal);
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
+input::placeholder {
+  color: var(--dc-text-muted);
+}
+
+input:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(30, 31, 34, 0.9);
+}
+
+input:focus {
+  border-color: var(--dc-blurple);
+  box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.25);
+  background: rgba(20, 21, 24, 0.9);
+}
+
+/* ───── Buttons ───── */
 button {
   cursor: pointer;
+  border-radius: 6px;
+  border: none;
+  padding: 10px 20px;
+  background: var(--dc-blurple);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 8px rgba(88, 101, 242, 0.35);
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
 }
 
+button:hover {
+  background: var(--dc-blurple-hover);
+  box-shadow: 0 4px 16px rgba(88, 101, 242, 0.5);
+}
+
+button:active {
+  background: var(--dc-blurple-active);
+  transform: translateY(1px);
+  box-shadow: 0 1px 4px rgba(88, 101, 242, 0.3);
+}
+
+/* Danger buttons (強制終了) */
+button.danger {
+  background: var(--dc-red);
+  box-shadow: 0 2px 8px rgba(237, 66, 69, 0.35);
+}
+button.danger:hover {
+  background: #c03537;
+  box-shadow: 0 4px 16px rgba(237, 66, 69, 0.5);
+}
+
+/* ───── Actions row ───── */
 .actions {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 
+/* ───── Giveaway list ───── */
 .giveawayList {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   padding: 0;
+  margin: 12px 0 0;
 }
 
 .giveawayList li {
-  border: 1px solid #374151;
+  background: rgba(30, 31, 34, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 10px;
-  padding: 10px;
+  padding: 14px 16px;
+  transition: border-color 0.2s, background 0.2s;
 }
 
+.giveawayList li:hover {
+  background: rgba(40, 42, 46, 0.75);
+  border-color: rgba(88, 101, 242, 0.35);
+}
+
+.giveawayList li strong {
+  color: var(--dc-header-primary);
+  font-size: 1rem;
+}
+
+/* ───── Message / hint ───── */
 .message {
-  color: #93c5fd;
+  margin: 4px 0 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(88, 101, 242, 0.15);
+  border: 1px solid rgba(88, 101, 242, 0.3);
+  color: #8ea1e1;
+  font-size: 0.9rem;
 }
 
 .hint {
-  color: #9ca3af;
-  margin-top: 0;
+  color: var(--dc-text-muted);
+  font-size: 0.85rem;
+  margin: -4px 0 10px;
+}
+
+/* ───── Vue component input override ───── */
+.input {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+  background: rgba(30, 31, 34, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--dc-text-normal);
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.input:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(30, 31, 34, 0.9);
+}
+
+.input:focus {
+  border-color: var(--dc-blurple);
+  box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.25);
+  background: rgba(20, 21, 24, 0.9);
 }

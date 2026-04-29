@@ -1,3 +1,13 @@
 * {
   box-sizing: border-box;
 }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #1e1f22;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(88, 101, 242, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(88, 101, 242, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 40% at 60% 40%, rgba(87, 52, 163, 0.1) 0%, transparent 50%);
+}
