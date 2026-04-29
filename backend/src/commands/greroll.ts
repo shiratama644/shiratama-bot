@@ -6,7 +6,7 @@ import { assertCanManageGiveaways } from './permissions.js';
 
 export const grerollCommand: Command = {
   name: 'greroll',
-  description: '終了したGiveawayを再抽選します',
+  description: 'Reroll an ended giveaway',
   options: [
     {
       name: 'id',
@@ -24,7 +24,7 @@ export const grerollCommand: Command = {
     const id = interaction.options.getString('id', true);
     await ensureGiveawayInGuild(id, interaction.guildId);
     await rerollGiveaway(client, id);
-    await interaction.reply({ content: `Giveaway (${id}) を再抽選しました。`, ephemeral: true });
+    await interaction.reply({ content: `Giveaway (${id}) has been rerolled.`, ephemeral: true });
   },
   autocomplete: async (interaction: AutocompleteInteraction) => {
     if (!interaction.guildId) return;

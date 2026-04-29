@@ -7,7 +7,7 @@ import { ensureGiveawayInGuild } from '../giveawayService.js';
 
 export const gendCommand: Command = {
   name: 'gend',
-  description: '選択したGiveawayを手動で終了します',
+  description: 'Manually end the selected giveaway',
   options: [
     {
       name: 'id',
@@ -25,7 +25,7 @@ export const gendCommand: Command = {
     const id = interaction.options.getString('id', true);
     await ensureGiveawayInGuild(id, interaction.guildId);
     await endGiveaway(client, id, true);
-    await interaction.reply({ content: `Giveaway (${id}) を終了しました。`, ephemeral: true });
+    await interaction.reply({ content: `Giveaway (${id}) has been ended.`, ephemeral: true });
   },
   autocomplete: async (interaction: AutocompleteInteraction) => {
     if (!interaction.guildId) return;

@@ -13,7 +13,7 @@ import { assertCanManageGiveaways } from './permissions.js';
 
 export const gcCommand: Command = {
     name: 'gc',
-    description: 'Giveaway作成フォームを開きます',
+    description: 'Open the giveaway creation form',
     execute: async (client: Client, interaction: ChatInputCommandInteraction) => {
         await assertCanManageGiveaways(interaction);
 

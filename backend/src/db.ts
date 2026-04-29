@@ -195,14 +195,14 @@ export async function createGiveaway(params: {
 export async function updateGiveawayStatus(id: string, status: Giveaway['status']): Promise<void> {
   const result = await getPool().query('UPDATE giveaways SET status = $2 WHERE id = $1', [id, status]);
   if ((result.rowCount ?? 0) === 0) {
-    throw new AppError('Giveawayが見つかりません。', 404);
+    throw new AppError('Giveaway not found.', 404);
   }
 }
 
 export async function updateGiveawayAutoRepeat(id: string, autoRepeat: boolean): Promise<void> {
   const result = await getPool().query('UPDATE giveaways SET auto_repeat = $2 WHERE id = $1', [id, autoRepeat]);
   if ((result.rowCount ?? 0) === 0) {
-    throw new AppError('Giveawayが見つかりません。', 404);
+    throw new AppError('Giveaway not found.', 404);
   }
 }
 
@@ -214,7 +214,7 @@ export async function listAllActiveGiveaways(): Promise<Giveaway[]> {
 export async function setGiveawayMessageId(id: string, messageId: string): Promise<void> {
   const result = await getPool().query('UPDATE giveaways SET message_id = $2 WHERE id = $1', [id, messageId]);
   if ((result.rowCount ?? 0) === 0) {
-    throw new AppError('Giveawayが見つかりません。', 404);
+    throw new AppError('Giveaway not found.', 404);
   }
 }
 
@@ -259,17 +259,17 @@ export async function getDueGiveaways(now: Date): Promise<Giveaway[]> {
 export async function markGiveawayEnded(id: string): Promise<void> {
   const result = await getPool().query(`UPDATE giveaways SET status = 'ended' WHERE id = $1`, [id]);
   if ((result.rowCount ?? 0) === 0) {
-    throw new AppError('Giveawayが見つかりません。', 404);
+    throw new AppError('Giveaway not found.', 404);
   }
 }
 
 export async function toggleGiveawayEntry(giveawayId: string, userId: string): Promise<'joined' | 'left'> {
   const giveaway = await getGiveaway(giveawayId);
   if (!giveaway) {
-    throw new AppError('Giveawayが見つかりません。', 404);
+    throw new AppError('Giveaway not found.', 404);
   }
   if (giveaway.status !== 'active') {
-    throw new AppError('このGiveawayは現在参加できません。', 409);
+    throw new AppError('This giveaway is not currently accepting entries.', 409);
   }
 
   const existing = await getPool().query(
@@ -291,6 +291,28 @@ export async function toggleGiveawayEntry(giveawayId: string, userId: string): P
   return 'joined';
 }
 
+export async function isUserEntered(giveawayId: string, userId: string): Promise<boolean> {
+  const result = await getPool().query(
+    'SELECT 1 FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2',
+    [giveawayId, userId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function joinGiveawayEntry(giveawayId: string, userId: string): Promise<void> {
+  await getPool().query(
+    'INSERT INTO giveaway_entries (giveaway_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+    [giveawayId, userId]
+  );
+}
+
+export async function leaveGiveawayEntry(giveawayId: string, userId: string): Promise<void> {
+  await getPool().query(
+    'DELETE FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2',
+    [giveawayId, userId]
+  );
+}
+
 export async function countEntries(giveawayId: string): Promise<number> {
   const result = await getPool().query(
     'SELECT COUNT(*)::int AS count FROM giveaway_entries WHERE giveaway_id = $1',
@@ -309,6 +331,6 @@ export async function listEntries(giveawayId: string): Promise<string[]> {
 export async function setGiveawayWinners(id: string, winners: string[]): Promise<void> {
   const result = await getPool().query('UPDATE giveaways SET winners = $2 WHERE id = $1', [id, winners]);
   if ((result.rowCount ?? 0) === 0) {
-    throw new AppError('Giveawayが見つかりません。', 404);
+    throw new AppError('Giveaway not found.', 404);
   }
 }

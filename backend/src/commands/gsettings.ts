@@ -6,8 +6,6 @@ import {
     LabelBuilder,
     ModalBuilder,
     RoleSelectMenuBuilder,
-    StringSelectMenuBuilder,
-    StringSelectMenuOptionBuilder,
     TextInputBuilder,
     TextInputStyle
 } from 'discord.js';
@@ -17,7 +15,7 @@ import { assertCanManageGiveaways } from './permissions.js';
 
 export const gsettingsCommand: Command = {
     name: 'gsettings',
-    description: '設定画面を開きます',
+    description: 'Open the settings panel',
     execute: async (client: Client, interaction: ChatInputCommandInteraction) => {
         await assertCanManageGiveaways(interaction);
         if (!interaction.guildId) return;
@@ -27,26 +25,6 @@ export const gsettingsCommand: Command = {
             new ModalBuilder()
                 .setTitle("Giveaway Settings")
                 .setCustomId("giveaway:settings")
-                .addLabelComponents(
-                    new LabelBuilder()
-                        .setLabel("Language")
-                        .setStringSelectMenuComponent(
-                            new StringSelectMenuBuilder()
-                                .setCustomId("language")
-                                .setMinValues(1)
-                                .setMaxValues(1)
-                                .addOptions(
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel("English")
-                                        .setValue("en")
-                                        .setDefault(settings.language === 'en'),
-                                    new StringSelectMenuOptionBuilder()
-                                        .setLabel("日本語")
-                                        .setValue("ja")
-                                        .setDefault(settings.language === 'ja')
-                                )
-                        )
-                )
                 .addLabelComponents(
                     new LabelBuilder()
                         .setLabel("Who Can Create a Giveaway")

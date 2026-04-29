@@ -7,7 +7,7 @@ import { ensureGiveawayInGuild } from '../giveawayService.js';
 
 export const gstartCommand: Command = {
   name: 'gstart',
-  description: '選択したGiveawayの自動作成を再開します',
+  description: 'Resume auto-repeat for the selected giveaway',
   options: [
     {
       name: 'id',
@@ -25,7 +25,7 @@ export const gstartCommand: Command = {
     const id = interaction.options.getString('id', true);
     await ensureGiveawayInGuild(id, interaction.guildId);
     await startGiveawayAutoRepeat(id);
-    await interaction.reply({ content: `Giveaway (${id}) の自動作成を再開しました。`, ephemeral: true });
+    await interaction.reply({ content: `Giveaway (${id}) auto-repeat has been resumed.`, ephemeral: true });
   },
   autocomplete: async (interaction: AutocompleteInteraction) => {
     if (!interaction.guildId) return;
