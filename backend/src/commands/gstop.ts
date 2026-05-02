@@ -7,7 +7,7 @@ import { ensureGiveawayInGuild } from '../giveawayService.js';
 
 export const gstopCommand: Command = {
   name: 'gstop',
-  description: '選択したGiveawayの自動作成を停止します',
+  description: 'Stop auto-repeat for the selected giveaway',
   options: [
     {
       name: 'id',
@@ -25,7 +25,7 @@ export const gstopCommand: Command = {
     const id = interaction.options.getString('id', true);
     await ensureGiveawayInGuild(id, interaction.guildId);
     await stopGiveawayAutoRepeat(id);
-    await interaction.reply({ content: `Giveaway (${id}) の自動作成を停止しました。`, ephemeral: true });
+    await interaction.reply({ content: `Giveaway (${id}) auto-repeat has been stopped.`, ephemeral: true });
   },
   autocomplete: async (interaction: AutocompleteInteraction) => {
     if (!interaction.guildId) return;

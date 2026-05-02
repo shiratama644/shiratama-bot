@@ -11,7 +11,7 @@ const guildId = process.env.DISCORD_GUILD_ID;
 const port = Number(process.env.PORT ?? 3000);
 
 if (!token || !appId || !process.env.DATABASE_URL) {
-  throw new Error('DISCORD_BOT_TOKEN / DISCORD_APP_ID / DATABASE_URL は必須です。');
+  throw new Error('DISCORD_BOT_TOKEN / DISCORD_APP_ID / DATABASE_URL are required.');
 }
 
 await initSchema();

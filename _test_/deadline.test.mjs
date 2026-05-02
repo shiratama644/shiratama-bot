@@ -28,12 +28,12 @@ test('parseDeadline parses date and returns end of day', () => {
 });
 
 test('parseDeadline rejects non-positive durations', () => {
-  assert.throws(() => parseDeadline('0d'), /期限は0より大きい必要があります/);
+  assert.throws(() => parseDeadline('0d'), /The deadline must be greater than 0/);
 });
 
 test('parseDeadline rejects invalid formats', () => {
   assert.throws(
     () => parseDeadline('not-a-deadline'),
-    /期限は YYYY\/MM\/DD または 10m\/10h\/5d の形式で入力してください/
+    /Deadline must be in YYYY\/MM\/DD or 10m\/10h\/5d format/
   );
 });

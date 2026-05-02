@@ -8,7 +8,7 @@ export function hasAnyRequiredRole(memberRoleIds: ReadonlySet<string>, requiredR
 
 export async function assertCanManageGiveaways(interaction: ChatInputCommandInteraction): Promise<void> {
   if (!interaction.guildId) {
-    throw new AppError('サーバー内で実行してください。', 400);
+    throw new AppError('Please run this command in a server.', 400);
   }
 
   const managerRoleIds = await getManagerRoleIds(interaction.guildId);
@@ -18,11 +18,11 @@ export async function assertCanManageGiveaways(interaction: ChatInputCommandInte
 
   const memberRoles = interaction.member?.roles;
   if (!memberRoles || Array.isArray(memberRoles)) {
-    throw new AppError('ロール情報を取得できません。', 403);
+    throw new AppError('Could not retrieve role information.', 403);
   }
 
   const hasRole = hasAnyRequiredRole(new Set(memberRoles.cache.keys()), managerRoleIds);
   if (!hasRole) {
-    throw new AppError('Giveaway操作権限がありません。', 403);
+    throw new AppError('You do not have permission to manage giveaways.', 403);
   }
 }
