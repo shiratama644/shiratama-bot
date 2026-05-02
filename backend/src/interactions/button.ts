@@ -48,7 +48,7 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
           .setStyle(ButtonStyle.Danger)
       );
       await interaction.reply({
-        content: 'You have already entered in this giveaway.',
+        content: 'You have already entered this giveaway.',
         components: [leaveRow],
         ephemeral: true
       });
