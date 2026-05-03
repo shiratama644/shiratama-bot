@@ -13,7 +13,7 @@ export function parseDeadline(input: string): Date {
     const amount = Number(durationMatch[1]);
     const unit = durationMatch[2].toLowerCase();
     if (amount <= 0) {
-      throw new Error('期限は0より大きい必要があります。');
+      throw new Error('The deadline must be greater than 0.');
     }
     const result = dayjs().add(amount, unit as 'm' | 'h' | 'd');
     return result.toDate();
@@ -21,7 +21,7 @@ export function parseDeadline(input: string): Date {
 
   const parsed = dayjs(value, 'YYYY/MM/DD', true);
   if (!parsed.isValid()) {
-    throw new Error('期限は YYYY/MM/DD または 10m/10h/5d の形式で入力してください。');
+    throw new Error('Deadline must be in YYYY/MM/DD or 10m/10h/5d format.');
   }
 
   return parsed.endOf('day').toDate();

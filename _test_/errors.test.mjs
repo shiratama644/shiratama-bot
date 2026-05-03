@@ -9,5 +9,5 @@ test('getErrorStatusCode returns status from AppError', () => {
 });
 
 test('getErrorMessage falls back for unknown error', () => {
-  assert.equal(getErrorMessage('bad'), 'エラー');
+  assert.equal(getErrorMessage('bad'), 'Error');
 });
