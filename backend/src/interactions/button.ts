@@ -41,6 +41,10 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
     const entered = await isUserEntered(giveawayId, interaction.user.id);
 
     if (entered) {
+      const leaveEmbed = new EmbedBuilder()
+        .setColor(Colors.Yellow)
+        .setTitle('🎫 Already Entered!')
+        .setDescription('You have already entered this giveaway.');
       const leaveRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`giveaway:leave:${giveawayId}`)
@@ -48,7 +52,7 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
           .setStyle(ButtonStyle.Danger)
       );
       await interaction.reply({
-        content: 'You have already entered this giveaway.',
+        embeds: [leaveEmbed],
         components: [leaveRow],
         ephemeral: true
       });
@@ -72,8 +76,12 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
     await ensureGiveawayIsActive(giveawayId);
     await removeGiveawayEntry(giveawayId, interaction.user.id);
     await refreshGiveawayMessage(client, giveawayId);
+    const leftEmbed = new EmbedBuilder()
+      .setColor(Colors.Red)
+      .setTitle('❌ Left Giveaway')
+      .setDescription('You have left the giveaway.');
     await interaction.reply({
-      content: '❌ You have left the giveaway.',
+      embeds: [leftEmbed],
       ephemeral: true
     });
   }

@@ -1,4 +1,4 @@
-import { Interaction, Client } from 'discord.js';
+import { Interaction, Client, EmbedBuilder, Colors } from 'discord.js';
 import { handleModalSubmit } from './modalSubmit.js';
 import { handleButton } from './button.js';
 import { commands } from '../commands/index.js';
@@ -34,11 +34,15 @@ export async function handleInteraction(client: Client, interaction: Interaction
   } catch (error) {
     logger.error('Interaction error:', error);
     const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+    const embed = new EmbedBuilder()
+      .setColor(Colors.Red)
+      .setTitle('❌ Error')
+      .setDescription(message);
     if (interaction.isRepliable()) {
       if (interaction.deferred || interaction.replied) {
-        await interaction.followUp({ content: message, ephemeral: true });
+        await interaction.followUp({ embeds: [embed], ephemeral: true });
       } else {
-        await interaction.reply({ content: message, ephemeral: true });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
       }
     }
   }
