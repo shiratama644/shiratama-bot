@@ -2,16 +2,35 @@ import express, { Request } from 'express';
 import {
   getGiveaway,
   getActiveGiveaways,
+  getEndedGiveaways,
   getManagerRoleIds,
-  setManagerRoleIds
+  setManagerRoleIds,
+  getGuildSettings,
+  setGuildSettings,
+  countEntries
 } from './db.js';
-import { createGiveawayPost, endGiveaway, rerollGiveaway } from './giveawayService.js';
+import {
+  createGiveawayPost,
+  endGiveaway,
+  rerollGiveaway,
+  stopGiveaway,
+  startGiveawayAutoRepeat,
+  stopGiveawayAutoRepeat,
+  ensureGiveawayInGuild
+} from './giveawayService.js';
 import type { Client } from 'discord.js';
 import { z } from 'zod';
 import { AppError, getErrorMessage, getErrorStatusCode } from './errors.js';
 
 const rolesSchema = z.object({
   roleIds: z.array(z.string().min(1))
+});
+
+const settingsSchema = z.object({
+  managerRoleIds: z.array(z.string()).optional(),
+  language: z.string().min(1).optional(),
+  giveawayChannelIds: z.array(z.string()).optional(),
+  defaultClaimDeadline: z.string().nullable().optional()
 });
 
 const createSchema = z.object({
@@ -73,6 +92,31 @@ export function createApiServer(client: Client) {
     const message = getErrorMessage(error);
     res.status(status).json({ error: message });
   }
+
+  app.get('/api/settings/:guildId', async (req, res) => {
+    const settings = await getGuildSettings(req.params.guildId);
+    res.json({ settings });
+  });
+
+  app.put('/api/settings/:guildId', async (req, res) => {
+    try {
+      requireAdminToken(req);
+      const body = settingsSchema.parse(req.body);
+      const existing = await getGuildSettings(req.params.guildId);
+      await setGuildSettings(req.params.guildId, {
+        managerRoleIds: body.managerRoleIds ?? existing.managerRoleIds,
+        language: body.language ?? existing.language,
+        giveawayChannelIds: body.giveawayChannelIds ?? existing.giveawayChannelIds,
+        defaultClaimDeadline:
+          body.defaultClaimDeadline !== undefined
+            ? body.defaultClaimDeadline
+            : existing.defaultClaimDeadline
+      });
+      res.json({ ok: true });
+    } catch (error) {
+      handleApiError(error, res);
+    }
+  });
 
   app.get('/api/roles/:guildId', async (req, res) => {
     const roleIds = await getManagerRoleIds(req.params.guildId);
