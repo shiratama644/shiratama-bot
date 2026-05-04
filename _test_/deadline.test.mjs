@@ -21,6 +21,15 @@ test('parseDeadline trims input and parses duration in hours case-insensitively'
   assert.ok(diff <= 121 * 60 * 1000, `diff too large: ${diff}`);
 });
 
+test('parseDeadline parses duration in days', () => {
+  const start = Date.now();
+  const parsed = parseDeadline('3d');
+  const diff = parsed.getTime() - start;
+
+  assert.ok(diff >= 3 * 24 * 60 * 60 * 1000 - 5000, `diff too small: ${diff}`);
+  assert.ok(diff <= 3 * 24 * 60 * 60 * 1000 + 5000, `diff too large: ${diff}`);
+});
+
 test('parseDeadline parses date and returns end of day', () => {
   const parsed = parseDeadline('2026/04/22');
 
@@ -29,6 +38,10 @@ test('parseDeadline parses date and returns end of day', () => {
 
 test('parseDeadline rejects non-positive durations', () => {
   assert.throws(() => parseDeadline('0d'), /The deadline must be greater than 0/);
+});
+
+test('parseDeadline rejects zero hours', () => {
+  assert.throws(() => parseDeadline('0h'), /The deadline must be greater than 0/);
 });
 
 test('parseDeadline rejects invalid formats', () => {

@@ -8,7 +8,7 @@ export function hasAnyRequiredRole(memberRoleIds: ReadonlySet<string>, requiredR
 
 export async function assertCanManageGiveaways(interaction: ChatInputCommandInteraction): Promise<void> {
   if (!interaction.guildId) {
-    throw new AppError('This command must be run inside a server.', 400);
+    throw new AppError('Please run this command in a server.', 400);
   }
 
   const managerRoleIds = await getManagerRoleIds(interaction.guildId);

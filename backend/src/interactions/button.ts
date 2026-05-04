@@ -1,14 +1,17 @@
 import {
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonInteraction,
   ButtonStyle,
+  ButtonInteraction,
   Client,
   Colors,
   EmbedBuilder
 } from 'discord.js';
-import { ensureGiveawayIsActive, refreshGiveawayMessage } from '../giveawayService.js';
-import { isUserEntered, joinGiveawayEntry, leaveGiveawayEntry } from '../db.js';
+import {
+  ensureGiveawayIsActive,
+  refreshGiveawayMessage
+} from '../giveawayService.js';
+import { isUserEntered, addGiveawayEntry, removeGiveawayEntry } from '../db.js';
 import { logger } from '../utils/logger.js';
 
 export async function handleButton(client: Client, interaction: ButtonInteraction) {
@@ -32,33 +35,34 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
   if (interaction.customId.startsWith('giveaway:toggle:')) {
     const giveawayId = interaction.customId.split(':')[2];
 
-    logger.info(`User ${interaction.user.id} pressing Enter for giveaway ${giveawayId}`);
+    logger.info(`User ${interaction.user.id} toggling entry for giveaway ${giveawayId}`);
 
     await ensureGiveawayIsActive(giveawayId);
+    const entered = await isUserEntered(giveawayId, interaction.user.id);
 
-    const alreadyEntered = await isUserEntered(giveawayId, interaction.user.id);
-
-    if (alreadyEntered) {
-      const embed = new EmbedBuilder()
+    if (entered) {
+      const leaveEmbed = new EmbedBuilder()
         .setColor(Colors.Yellow)
-        .setDescription('You have already entered in this giveaway.');
-
+        .setTitle('🎫 Already Entered!')
+        .setDescription('You have already entered this giveaway.');
       const leaveRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`giveaway:leave:${giveawayId}`)
           .setLabel('Leave Giveaway')
           .setStyle(ButtonStyle.Danger)
       );
-
-      await interaction.reply({ embeds: [embed], components: [leaveRow], ephemeral: true });
+      await interaction.reply({
+        embeds: [leaveEmbed],
+        components: [leaveRow],
+        ephemeral: true
+      });
     } else {
-      await joinGiveawayEntry(giveawayId, interaction.user.id);
+      await addGiveawayEntry(giveawayId, interaction.user.id);
       await refreshGiveawayMessage(client, giveawayId);
-
       const embed = new EmbedBuilder()
         .setColor(Colors.Green)
-        .setDescription('✅ You have entered the giveaway!');
-
+        .setTitle('✅ Entered!')
+        .setDescription('You have entered the giveaway. Good luck!');
       await interaction.reply({ embeds: [embed], ephemeral: true });
     }
     return;
@@ -70,13 +74,15 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
     logger.info(`User ${interaction.user.id} leaving giveaway ${giveawayId}`);
 
     await ensureGiveawayIsActive(giveawayId);
-    await leaveGiveawayEntry(giveawayId, interaction.user.id);
+    await removeGiveawayEntry(giveawayId, interaction.user.id);
     await refreshGiveawayMessage(client, giveawayId);
-
-    const embed = new EmbedBuilder()
+    const leftEmbed = new EmbedBuilder()
       .setColor(Colors.Red)
-      .setDescription('❌ You have left the giveaway.');
-
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+      .setTitle('❌ Left Giveaway')
+      .setDescription('You have left the giveaway.');
+    await interaction.reply({
+      embeds: [leftEmbed],
+      ephemeral: true
+    });
   }
 }

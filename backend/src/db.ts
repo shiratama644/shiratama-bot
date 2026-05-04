@@ -269,7 +269,7 @@ export async function toggleGiveawayEntry(giveawayId: string, userId: string): P
     throw new AppError('Giveaway not found.', 404);
   }
   if (giveaway.status !== 'active') {
-    throw new AppError('This giveaway is not currently accepting entries.', 409);
+    throw new AppError('This giveaway is not currently active.', 409);
   }
 
   const existing = await getPool().query(
@@ -299,14 +299,14 @@ export async function isUserEntered(giveawayId: string, userId: string): Promise
   return (result.rowCount ?? 0) > 0;
 }
 
-export async function joinGiveawayEntry(giveawayId: string, userId: string): Promise<void> {
+export async function addGiveawayEntry(giveawayId: string, userId: string): Promise<void> {
   await getPool().query(
     'INSERT INTO giveaway_entries (giveaway_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
     [giveawayId, userId]
   );
 }
 
-export async function leaveGiveawayEntry(giveawayId: string, userId: string): Promise<void> {
+export async function removeGiveawayEntry(giveawayId: string, userId: string): Promise<void> {
   await getPool().query(
     'DELETE FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2',
     [giveawayId, userId]

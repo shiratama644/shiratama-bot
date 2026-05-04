@@ -26,7 +26,7 @@ const createSchema = z.object({
 function requireAdminToken(req: Request): void {
   const adminToken = process.env.ADMIN_API_TOKEN;
   if (!adminToken) {
-    throw new AppError('ADMIN_API_TOKEN is not configured.', 500);
+    throw new AppError('ADMIN_API_TOKEN is not set.', 500);
   }
   if (req.header('x-admin-token') !== adminToken) {
     throw new AppError('Invalid admin token.', 401);
@@ -112,7 +112,7 @@ export function createApiServer(client: Client) {
         }
         const member = await guild.members.fetch(userId).catch(() => null);
         if (!member) {
-          throw new AppError('User is not a member of this server.', 403);
+          throw new AppError('User is not a member of this guild.', 403);
         }
         const hasManagerRole = managerRoleIds.some((id) => member.roles.cache.has(id));
         if (!hasManagerRole) {
@@ -146,7 +146,7 @@ export function createApiServer(client: Client) {
         throw new AppError('Giveaway not found.', 404);
       }
       if (giveaway.guildId !== guildId) {
-        throw new AppError('You cannot manage a giveaway from another server.', 403);
+        throw new AppError('You cannot manage giveaways from other servers.', 403);
       }
       await endGiveaway(client, req.params.id);
       res.json({ ok: true });
@@ -164,7 +164,7 @@ export function createApiServer(client: Client) {
         throw new AppError('Giveaway not found.', 404);
       }
       if (giveaway.guildId !== guildId) {
-        throw new AppError('You cannot manage a giveaway from another server.', 403);
+        throw new AppError('You cannot manage giveaways from other servers.', 403);
       }
       const winners = await rerollGiveaway(client, req.params.id);
       res.json({ winners });

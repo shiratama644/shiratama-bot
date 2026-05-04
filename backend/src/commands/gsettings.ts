@@ -15,7 +15,7 @@ import { assertCanManageGiveaways } from './permissions.js';
 
 export const gsettingsCommand: Command = {
     name: 'gsettings',
-    description: 'Open the settings panel',
+    description: 'Open settings',
     execute: async (client: Client, interaction: ChatInputCommandInteraction) => {
         await assertCanManageGiveaways(interaction);
         if (!interaction.guildId) return;
