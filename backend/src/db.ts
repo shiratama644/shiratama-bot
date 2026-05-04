@@ -230,7 +230,7 @@ export async function getActiveGiveaways(guildId: string): Promise<Giveaway[]> {
   const result = await getPool().query(
     `SELECT * FROM giveaways
      WHERE guild_id = $1 AND status = 'active'
-     ORDER BY end_at ASC`,
+     ORDER BY created_at DESC`,
     [guildId]
   );
   return result.rows.map((row: Record<string, unknown>) => mapGiveaway(row));
@@ -240,7 +240,7 @@ export async function getEndedGiveaways(guildId: string): Promise<Giveaway[]> {
   const result = await getPool().query(
     `SELECT * FROM giveaways
      WHERE guild_id = $1 AND status = 'ended'
-     ORDER BY end_at DESC`,
+     ORDER BY created_at DESC`,
     [guildId]
   );
   return result.rows.map((row: Record<string, unknown>) => mapGiveaway(row));
