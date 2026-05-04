@@ -33,7 +33,7 @@ export async function handleInteraction(client: Client, interaction: Interaction
     }
   } catch (error) {
     logger.error('Interaction error:', error);
-    const message = error instanceof Error ? error.message : '不明なエラーです。';
+    const message = error instanceof Error ? error.message : 'An unknown error occurred.';
     if (interaction.isRepliable()) {
       if (interaction.deferred || interaction.replied) {
         await interaction.followUp({ content: message, ephemeral: true });

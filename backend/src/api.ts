@@ -26,10 +26,10 @@ const createSchema = z.object({
 function requireAdminToken(req: Request): void {
   const adminToken = process.env.ADMIN_API_TOKEN;
   if (!adminToken) {
-    throw new AppError('ADMIN_API_TOKEN が未設定です。', 500);
+    throw new AppError('ADMIN_API_TOKEN is not configured.', 500);
   }
   if (req.header('x-admin-token') !== adminToken) {
-    throw new AppError('管理者トークンが不正です。', 401);
+    throw new AppError('Invalid admin token.', 401);
   }
 }
 
@@ -44,12 +44,12 @@ export function createApiServer(client: Client) {
     if (allowedOrigin) {
       if (!requestOrigin) {
         if (!adminToken || req.header('x-admin-token') !== adminToken) {
-          res.status(403).json({ error: 'Originヘッダーが必要です。' });
+          res.status(403).json({ error: 'Origin header is required.' });
           return;
         }
       }
       if (requestOrigin && requestOrigin !== allowedOrigin) {
-        res.status(403).json({ error: '許可されていないOriginです。' });
+        res.status(403).json({ error: 'Origin not allowed.' });
         return;
       }
     }
@@ -101,22 +101,22 @@ export function createApiServer(client: Client) {
       const body = createSchema.parse(req.body);
       const userId = req.header('x-user-id');
       if (!userId) {
-        throw new AppError('x-user-id ヘッダーが必要です。', 400);
+        throw new AppError('x-user-id header is required.', 400);
       }
 
       const managerRoleIds = await getManagerRoleIds(body.guildId);
       if (managerRoleIds.length > 0) {
         const guild = await client.guilds.fetch(body.guildId).catch(() => null);
         if (!guild) {
-          throw new AppError('Guildが見つかりません。', 404);
+          throw new AppError('Guild not found.', 404);
         }
         const member = await guild.members.fetch(userId).catch(() => null);
         if (!member) {
-          throw new AppError('ユーザーがGuildに存在しません。', 403);
+          throw new AppError('User is not a member of this server.', 403);
         }
         const hasManagerRole = managerRoleIds.some((id) => member.roles.cache.has(id));
         if (!hasManagerRole) {
-          throw new AppError('Giveaway作成権限がありません。', 403);
+          throw new AppError('You do not have permission to create giveaways.', 403);
         }
       }
 
@@ -143,10 +143,10 @@ export function createApiServer(client: Client) {
       const guildId = z.object({ guildId: z.string().min(1) }).parse(req.body).guildId;
       const giveaway = await getGiveaway(req.params.id);
       if (!giveaway) {
-        throw new AppError('Giveawayが見つかりません。', 404);
+        throw new AppError('Giveaway not found.', 404);
       }
       if (giveaway.guildId !== guildId) {
-        throw new AppError('別サーバーのGiveawayは操作できません。', 403);
+        throw new AppError('You cannot manage a giveaway from another server.', 403);
       }
       await endGiveaway(client, req.params.id);
       res.json({ ok: true });
@@ -161,10 +161,10 @@ export function createApiServer(client: Client) {
       const guildId = z.object({ guildId: z.string().min(1) }).parse(req.body).guildId;
       const giveaway = await getGiveaway(req.params.id);
       if (!giveaway) {
-        throw new AppError('Giveawayが見つかりません。', 404);
+        throw new AppError('Giveaway not found.', 404);
       }
       if (giveaway.guildId !== guildId) {
-        throw new AppError('別サーバーのGiveawayは操作できません。', 403);
+        throw new AppError('You cannot manage a giveaway from another server.', 403);
       }
       const winners = await rerollGiveaway(client, req.params.id);
       res.json({ winners });
