@@ -33,6 +33,7 @@ export const gsettingsCommand: Command = {
                                 .setCustomId("giveaway:who")
                                 .setMinValues(1)
                                 .setMaxValues(25)
+                                .setDefaultRoles(settings.managerRoleIds)
                         )
                 )
                 .addLabelComponents(
@@ -44,6 +45,7 @@ export const gsettingsCommand: Command = {
                                 .setMinValues(1)
                                 .setMaxValues(25)
                                 .setChannelTypes([ChannelType.GuildText])
+                                .setDefaultChannels(settings.giveawayChannelIds)
                         )
                 )
                 .addLabelComponents(
