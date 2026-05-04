@@ -46,7 +46,7 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     if (!interaction.guildId) throw new Error('Guild not found.');
 
     const languageValues = interaction.fields.getStringSelectValues('df1519548e2443ffb8fbeee6ef9620e2');
-    const language = languageValues[0] ?? 'en';
+    const language = languageValues[0] ?? '9ef04cfa6ee749c2ba62b79c80290373';
 
     const rolesCollection = interaction.fields.getSelectedRoles('giveaway:who');
     const managerRoleIds = rolesCollection ? [...rolesCollection.keys()] : [];
