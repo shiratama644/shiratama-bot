@@ -69,6 +69,7 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
 
     logger.info(`User ${interaction.user.id} leaving giveaway ${giveawayId}`);
 
+    await ensureGiveawayIsActive(giveawayId);
     await leaveGiveawayEntry(giveawayId, interaction.user.id);
     await refreshGiveawayMessage(client, giveawayId);
 

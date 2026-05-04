@@ -36,7 +36,7 @@ function parseDurationSeconds(duration: string): number {
 }
 
 function formatWinnerMentions(winners: string[]): string {
-  return winners.map(id => userMention(id)).join(', ');
+  return winners.map(id => userMention(id)).join(' ');
 }
 
 function calculateClaimDeadlineTimestamp(giveaway: { endAt: Date; claimDeadline: string | null }): number | null {
@@ -303,7 +303,7 @@ export async function endGiveaway(client: Client, giveawayId: string, manualEnd 
   if (winners.length === 0) {
     endContent = `No participants, so no winners were selected.\nPrize: **${giveaway.title}**`;
   } else {
-    endContent = `Congratulations ${winners.map(id => userMention(id)).join(' ')}!\nYou won the **${giveaway.title}** giveaway!`;
+    endContent = `Congratulations ${formatWinnerMentions(winners)}!\nYou won the **${giveaway.title}** giveaway!`;
   }
 
   if (winners.length > 0 && claimDeadlineTs) {
