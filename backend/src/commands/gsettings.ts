@@ -6,6 +6,8 @@ import {
     LabelBuilder,
     ModalBuilder,
     RoleSelectMenuBuilder,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
     TextInputBuilder,
     TextInputStyle
 } from 'discord.js';
@@ -25,6 +27,26 @@ export const gsettingsCommand: Command = {
             new ModalBuilder()
                 .setTitle("Giveaway Settings")
                 .setCustomId("giveaway:settings")
+                .addLabelComponents(
+                    new LabelBuilder()
+                        .setLabel("Language")
+                        .setStringSelectMenuComponent(
+                            new StringSelectMenuBuilder()
+                                .setCustomId("df1519548e2443ffb8fbeee6ef9620e2")
+                                .addOptions(
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel("English")
+                                        .setValue("9ef04cfa6ee749c2ba62b79c80290373")
+                                        .setEmoji("🇺🇸")
+                                        .setDefault(settings.language !== "5370da38d3b64f50a2da0b0369bde6a3"),
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel("Japanese")
+                                        .setValue("5370da38d3b64f50a2da0b0369bde6a3")
+                                        .setEmoji("🇯🇵")
+                                        .setDefault(settings.language === "5370da38d3b64f50a2da0b0369bde6a3")
+                                )
+                        )
+                )
                 .addLabelComponents(
                     new LabelBuilder()
                         .setLabel("Who Can Create a Giveaway")
