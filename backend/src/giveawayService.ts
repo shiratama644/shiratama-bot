@@ -22,6 +22,7 @@ import {
 } from './db.js';
 import { parseDeadline } from './deadline.js';
 import { AppError } from './errors.js';
+import { buttonClaimId, buttonCopyId, buttonToggleId } from './ids.js';
 import type { Giveaway, GiveawayStatus } from './types.js';
 import { logger } from './utils/logger.js';
 
@@ -53,13 +54,13 @@ function calculateClaimDeadlineTimestamp(giveaway: { endAt: Date; claimDeadline:
 export function giveawayButtons(giveawayId: string, disabled = false): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`giveaway:toggle:${giveawayId}`)
+      .setCustomId(buttonToggleId(giveawayId))
       .setEmoji('🎉')
       .setLabel('Enter')
       .setStyle(ButtonStyle.Primary)
       .setDisabled(disabled),
     new ButtonBuilder()
-      .setCustomId(`copy_id_${giveawayId}`)
+      .setCustomId(buttonCopyId(giveawayId))
       .setLabel('Copy ID')
       .setEmoji('📋')
       .setStyle(ButtonStyle.Secondary)
@@ -329,7 +330,7 @@ export async function endGiveaway(client: Client, giveawayId: string, manualEnd 
 
       const claimRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-          .setCustomId(`claim_prize_${giveaway.id}`)
+          .setCustomId(buttonClaimId(giveaway.id))
           .setLabel('Claim Prize')
           .setEmoji('🎫')
           .setStyle(ButtonStyle.Success)
