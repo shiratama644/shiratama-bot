@@ -12,6 +12,7 @@ export const FIELD_CREATE_DESCRIPTION = 'giveaway:create:description';
 // Autorep select option values
 export const VALUE_AUTOREP_DISABLE = 'disable';
 export const VALUE_AUTOREP_ENABLE = 'enable';
+export const VALUE_DEFAULT_WINNERS = '1';
 
 // ── Giveaway-settings modal field IDs ────────────────────────────────────────
 export const FIELD_SETTINGS_LANGUAGE = 'giveaway:settings:language';
@@ -34,3 +35,7 @@ export const buttonToggleId = (giveawayId: string) => `${BUTTON_TOGGLE_PREFIX}${
 export const buttonCopyId = (giveawayId: string) => `${BUTTON_COPY_PREFIX}${giveawayId}`;
 export const buttonClaimId = (giveawayId: string) => `${BUTTON_CLAIM_PREFIX}${giveawayId}`;
 export const buttonLeaveId = (giveawayId: string) => `${BUTTON_LEAVE_PREFIX}${giveawayId}`;
+
+// ── Embed identifier text helpers ───────────────────────────────────────────────
+export const EMBED_CLAIM_FOOTER_PREFIX = 'Claim • ';
+export const embedClaimFooterText = (giveawayId: string) => `${EMBED_CLAIM_FOOTER_PREFIX}${giveawayId}`;

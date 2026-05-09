@@ -22,7 +22,7 @@ import {
 } from './db.js';
 import { parseDeadline } from './deadline.js';
 import { AppError } from './errors.js';
-import { buttonClaimId, buttonCopyId, buttonToggleId } from './ids.js';
+import { buttonClaimId, buttonCopyId, buttonToggleId, embedClaimFooterText } from './ids.js';
 import type { Giveaway, GiveawayStatus } from './types.js';
 import { logger } from './utils/logger.js';
 
@@ -326,7 +326,7 @@ export async function endGiveaway(client: Client, giveawayId: string, manualEnd 
           '',
           `⏰ **Claim by:** <t:${claimDeadlineTs}:R> (<t:${claimDeadlineTs}:f>)`
         ].join('\n'))
-        .setFooter({ text: `Claim • ${giveaway.id}` });
+        .setFooter({ text: embedClaimFooterText(giveaway.id) });
 
       const claimRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()

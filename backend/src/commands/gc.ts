@@ -18,7 +18,8 @@ import {
     FIELD_CREATE_WINNERS,
     MODAL_GIVEAWAY_CREATE,
     VALUE_AUTOREP_DISABLE,
-    VALUE_AUTOREP_ENABLE
+    VALUE_AUTOREP_ENABLE,
+    VALUE_DEFAULT_WINNERS
 } from '../ids.js';
 
 export const gcCommand: Command = {
@@ -80,8 +81,8 @@ export const gcCommand: Command = {
                             new TextInputBuilder()
                                 .setCustomId(FIELD_CREATE_WINNERS)
                                 .setStyle(TextInputStyle.Short)
-                                .setPlaceholder("1")
-                                .setValue("1")
+                                .setPlaceholder(VALUE_DEFAULT_WINNERS)
+                                .setValue(VALUE_DEFAULT_WINNERS)
                                 .setMinLength(1)
                         )
                 )
