@@ -279,6 +279,10 @@ export async function markGiveawayEnded(id: string): Promise<void> {
 }
 
 export async function toggleGiveawayEntry(giveawayId: string, userId: string): Promise<'joined' | 'left'> {
+  // Atomic toggle in a single statement:
+  // 1) Confirm giveaway exists and is active.
+  // 2) If user is already entered, delete the entry.
+  // 3) Otherwise insert an entry, tolerating concurrent inserts with ON CONFLICT DO NOTHING.
   const result = await dbQuery<{
     status: Giveaway['status'] | null;
     joined: boolean;
@@ -322,7 +326,7 @@ export async function toggleGiveawayEntry(giveawayId: string, userId: string): P
     return 'left';
   }
 
-  // If a concurrent insert happened and ON CONFLICT DO NOTHING was triggered, treat as joined.
+  // When active and not left, treat as joined (including concurrent ON CONFLICT no-op cases).
   return 'joined';
 }
 
