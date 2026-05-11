@@ -1,16 +1,19 @@
-import { Pool } from 'pg';
+import { Pool, QueryResult } from 'pg';
 import type { Giveaway, GuildSettings } from './types.js';
 import { logger } from './utils/logger.js';
 import { AppError } from './errors.js';
 
 let pool: Pool | null = null;
+const ENTITY_GIVEAWAY = 'Giveaway';
+
+type DbRow = Record<string, unknown>;
 
 function getPool(): Pool {
   if (pool === null) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       logger.error('DATABASE_URL is not defined in environment variables');
-      throw new Error('Database configuration error');
+      throw new AppError('Database configuration error.', 500);
     }
     pool = new Pool({
       connectionString
@@ -22,7 +25,25 @@ function getPool(): Pool {
   return pool;
 }
 
-function mapGiveaway(row: Record<string, unknown>): Giveaway {
+async function dbQuery<T extends DbRow = DbRow>(
+  text: string,
+  params: unknown[] = []
+): Promise<QueryResult<T>> {
+  try {
+    return await getPool().query<T>(text, params);
+  } catch (error) {
+    logger.error('Database query failed', { text, error });
+    throw new AppError('Database operation failed.', 500);
+  }
+}
+
+function assertRowsAffected(rowCount: number | null | undefined, entity: string): void {
+  if ((rowCount ?? 0) === 0) {
+    throw new AppError(`${entity} not found.`, 404);
+  }
+}
+
+function mapGiveaway(row: DbRow): Giveaway {
   return {
     id: String(row.id),
     guildId: String(row.guild_id),
@@ -45,7 +66,7 @@ function mapGiveaway(row: Record<string, unknown>): Giveaway {
 export async function initSchema(): Promise<void> {
   logger.info('Initializing database schema...');
   try {
-    await getPool().query(`
+    await dbQuery(`
       CREATE TABLE IF NOT EXISTS guild_settings (
       guild_id TEXT PRIMARY KEY,
       manager_role_ids TEXT[] NOT NULL DEFAULT '{}',
@@ -80,10 +101,12 @@ export async function initSchema(): Promise<void> {
     );
 
       CREATE INDEX IF NOT EXISTS idx_giveaways_active_end_at ON giveaways(status, end_at);
+      CREATE INDEX IF NOT EXISTS idx_giveaways_guild_status_created_at ON giveaways(guild_id, status, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_giveaway_entries_giveaway_id ON giveaway_entries(giveaway_id);
     `);
 
     // Migrate existing tables by adding columns that may not exist yet
-    await getPool().query(`
+    await dbQuery(`
       ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
       ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS giveaway_channel_ids TEXT[] NOT NULL DEFAULT '{}';
       ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS default_claim_deadline TEXT;
@@ -104,7 +127,7 @@ export async function getManagerRoleIds(guildId: string): Promise<string[]> {
 }
 
 export async function setManagerRoleIds(guildId: string, roleIds: string[]): Promise<void> {
-  await getPool().query(
+  await dbQuery(
     `INSERT INTO guild_settings (guild_id, manager_role_ids)
      VALUES ($1, $2)
      ON CONFLICT (guild_id)
@@ -114,7 +137,7 @@ export async function setManagerRoleIds(guildId: string, roleIds: string[]): Pro
 }
 
 export async function getGuildSettings(guildId: string): Promise<GuildSettings> {
-  const result = await getPool().query(
+  const result = await dbQuery(
     'SELECT * FROM guild_settings WHERE guild_id = $1',
     [guildId]
   );
@@ -127,7 +150,7 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
       defaultClaimDeadline: null
     };
   }
-  const row = result.rows[0] as Record<string, unknown>;
+  const row = result.rows[0] as DbRow;
   return {
     guildId: String(row.guild_id),
     managerRoleIds: (row.manager_role_ids as string[]) ?? [],
@@ -138,7 +161,7 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
 }
 
 export async function setGuildSettings(guildId: string, settings: Partial<Omit<GuildSettings, 'guildId'>>): Promise<void> {
-  await getPool().query(
+  await dbQuery(
     `INSERT INTO guild_settings (guild_id, manager_role_ids, language, giveaway_channel_ids, default_claim_deadline)
      VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (guild_id)
@@ -170,7 +193,7 @@ export async function createGiveaway(params: {
   autoRepeat: boolean;
   claimDeadline: string | null;
 }): Promise<Giveaway> {
-  const result = await getPool().query(
+  const result = await dbQuery(
     `INSERT INTO giveaways (
       id, guild_id, channel_id, title, description, end_at, winner_count, created_by, interval, auto_repeat, claim_deadline
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
@@ -189,110 +212,122 @@ export async function createGiveaway(params: {
       params.claimDeadline
     ]
   );
-  return mapGiveaway(result.rows[0] as Record<string, unknown>);
+  return mapGiveaway(result.rows[0] as DbRow);
 }
 
 export async function updateGiveawayStatus(id: string, status: Giveaway['status']): Promise<void> {
-  const result = await getPool().query('UPDATE giveaways SET status = $2 WHERE id = $1', [id, status]);
-  if ((result.rowCount ?? 0) === 0) {
-    throw new AppError('Giveaway not found.', 404);
-  }
+  const result = await dbQuery('UPDATE giveaways SET status = $2 WHERE id = $1', [id, status]);
+  assertRowsAffected(result.rowCount, ENTITY_GIVEAWAY);
 }
 
 export async function updateGiveawayAutoRepeat(id: string, autoRepeat: boolean): Promise<void> {
-  const result = await getPool().query('UPDATE giveaways SET auto_repeat = $2 WHERE id = $1', [id, autoRepeat]);
-  if ((result.rowCount ?? 0) === 0) {
-    throw new AppError('Giveaway not found.', 404);
-  }
+  const result = await dbQuery('UPDATE giveaways SET auto_repeat = $2 WHERE id = $1', [id, autoRepeat]);
+  assertRowsAffected(result.rowCount, ENTITY_GIVEAWAY);
 }
 
 export async function listAllActiveGiveaways(): Promise<Giveaway[]> {
-  const result = await getPool().query(`SELECT * FROM giveaways WHERE status = 'active'`);
-  return result.rows.map((row: Record<string, unknown>) => mapGiveaway(row));
+  const result = await dbQuery(`SELECT * FROM giveaways WHERE status = 'active'`);
+  return result.rows.map((row: DbRow) => mapGiveaway(row));
 }
 
 export async function setGiveawayMessageId(id: string, messageId: string): Promise<void> {
-  const result = await getPool().query('UPDATE giveaways SET message_id = $2 WHERE id = $1', [id, messageId]);
-  if ((result.rowCount ?? 0) === 0) {
-    throw new AppError('Giveaway not found.', 404);
-  }
+  const result = await dbQuery('UPDATE giveaways SET message_id = $2 WHERE id = $1', [id, messageId]);
+  assertRowsAffected(result.rowCount, ENTITY_GIVEAWAY);
 }
 
 export async function getGiveaway(id: string): Promise<Giveaway | null> {
-  const result = await getPool().query('SELECT * FROM giveaways WHERE id = $1', [id]);
+  const result = await dbQuery('SELECT * FROM giveaways WHERE id = $1', [id]);
   if (result.rowCount === 0) {
     return null;
   }
-  return mapGiveaway(result.rows[0] as Record<string, unknown>);
+  return mapGiveaway(result.rows[0] as DbRow);
 }
 
 export async function getActiveGiveaways(guildId: string): Promise<Giveaway[]> {
-  const result = await getPool().query(
+  const result = await dbQuery(
     `SELECT * FROM giveaways
      WHERE guild_id = $1 AND status = 'active'
      ORDER BY created_at DESC`,
     [guildId]
   );
-  return result.rows.map((row: Record<string, unknown>) => mapGiveaway(row));
+  return result.rows.map((row: DbRow) => mapGiveaway(row));
 }
 
 export async function getEndedGiveaways(guildId: string): Promise<Giveaway[]> {
-  const result = await getPool().query(
+  const result = await dbQuery(
     `SELECT * FROM giveaways
      WHERE guild_id = $1 AND status = 'ended'
      ORDER BY created_at DESC`,
     [guildId]
   );
-  return result.rows.map((row: Record<string, unknown>) => mapGiveaway(row));
+  return result.rows.map((row: DbRow) => mapGiveaway(row));
 }
 
 export async function getDueGiveaways(now: Date): Promise<Giveaway[]> {
-  const result = await getPool().query(
+  const result = await dbQuery(
     `SELECT * FROM giveaways
      WHERE status = 'active' AND end_at <= $1
      ORDER BY end_at ASC`,
     [now]
   );
-  return result.rows.map((row: Record<string, unknown>) => mapGiveaway(row));
+  return result.rows.map((row: DbRow) => mapGiveaway(row));
 }
 
 export async function markGiveawayEnded(id: string): Promise<void> {
-  const result = await getPool().query(`UPDATE giveaways SET status = 'ended' WHERE id = $1`, [id]);
-  if ((result.rowCount ?? 0) === 0) {
-    throw new AppError('Giveaway not found.', 404);
-  }
+  const result = await dbQuery(`UPDATE giveaways SET status = 'ended' WHERE id = $1`, [id]);
+  assertRowsAffected(result.rowCount, ENTITY_GIVEAWAY);
 }
 
 export async function toggleGiveawayEntry(giveawayId: string, userId: string): Promise<'joined' | 'left'> {
-  const giveaway = await getGiveaway(giveawayId);
-  if (!giveaway) {
-    throw new AppError('Giveaway not found.', 404);
+  const result = await dbQuery<{
+    status: Giveaway['status'] | null;
+    joined: boolean;
+    left: boolean;
+  }>(
+    `WITH target AS (
+       SELECT status
+       FROM giveaways
+       WHERE id = $1
+     ),
+     deleted AS (
+       DELETE FROM giveaway_entries
+       WHERE giveaway_id = $1 AND user_id = $2
+         AND EXISTS (SELECT 1 FROM target WHERE status = 'active')
+       RETURNING 1
+     ),
+     inserted AS (
+       INSERT INTO giveaway_entries (giveaway_id, user_id)
+       SELECT $1, $2
+       WHERE EXISTS (SELECT 1 FROM target WHERE status = 'active')
+         AND NOT EXISTS (SELECT 1 FROM deleted)
+       ON CONFLICT DO NOTHING
+       RETURNING 1
+     )
+     SELECT
+       (SELECT status FROM target) AS status,
+       EXISTS (SELECT 1 FROM inserted) AS joined,
+       EXISTS (SELECT 1 FROM deleted) AS left`,
+    [giveawayId, userId]
+  );
+
+  const row = result.rows[0];
+  if (!row?.status) {
+    throw new AppError(`${ENTITY_GIVEAWAY} not found.`, 404);
   }
-  if (giveaway.status !== 'active') {
+  if (row.status !== 'active') {
     throw new AppError('This giveaway is not currently active.', 409);
   }
 
-  const existing = await getPool().query(
-    'SELECT 1 FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2',
-    [giveawayId, userId]
-  );
-  if (existing.rowCount && existing.rowCount > 0) {
-    await getPool().query('DELETE FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2', [
-      giveawayId,
-      userId
-    ]);
+  if (row.left) {
     return 'left';
   }
 
-  await getPool().query(
-    'INSERT INTO giveaway_entries (giveaway_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-    [giveawayId, userId]
-  );
+  // If a concurrent insert happened and ON CONFLICT DO NOTHING was triggered, treat as joined.
   return 'joined';
 }
 
 export async function isUserEntered(giveawayId: string, userId: string): Promise<boolean> {
-  const result = await getPool().query(
+  const result = await dbQuery(
     'SELECT 1 FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2',
     [giveawayId, userId]
   );
@@ -300,37 +335,35 @@ export async function isUserEntered(giveawayId: string, userId: string): Promise
 }
 
 export async function addGiveawayEntry(giveawayId: string, userId: string): Promise<void> {
-  await getPool().query(
+  await dbQuery(
     'INSERT INTO giveaway_entries (giveaway_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
     [giveawayId, userId]
   );
 }
 
 export async function removeGiveawayEntry(giveawayId: string, userId: string): Promise<void> {
-  await getPool().query(
+  await dbQuery(
     'DELETE FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2',
     [giveawayId, userId]
   );
 }
 
 export async function countEntries(giveawayId: string): Promise<number> {
-  const result = await getPool().query(
+  const result = await dbQuery<{ count: number }>(
     'SELECT COUNT(*)::int AS count FROM giveaway_entries WHERE giveaway_id = $1',
     [giveawayId]
   );
-  return Number(result.rows[0].count);
+  return Number(result.rows[0]?.count ?? 0);
 }
 
 export async function listEntries(giveawayId: string): Promise<string[]> {
-  const result = await getPool().query('SELECT user_id FROM giveaway_entries WHERE giveaway_id = $1', [
+  const result = await dbQuery<{ user_id: string }>('SELECT user_id FROM giveaway_entries WHERE giveaway_id = $1', [
     giveawayId
   ]);
-  return result.rows.map((row: Record<string, unknown>) => String(row.user_id));
+  return result.rows.map((row) => String(row.user_id));
 }
 
 export async function setGiveawayWinners(id: string, winners: string[]): Promise<void> {
-  const result = await getPool().query('UPDATE giveaways SET winners = $2 WHERE id = $1', [id, winners]);
-  if ((result.rowCount ?? 0) === 0) {
-    throw new AppError('Giveaway not found.', 404);
-  }
+  const result = await dbQuery('UPDATE giveaways SET winners = $2 WHERE id = $1', [id, winners]);
+  assertRowsAffected(result.rowCount, ENTITY_GIVEAWAY);
 }

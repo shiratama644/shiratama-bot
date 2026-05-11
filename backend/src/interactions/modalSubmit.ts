@@ -17,6 +17,7 @@ import {
   VALUE_AUTOREP_ENABLE
 } from '../ids.js';
 import { logger } from '../utils/logger.js';
+import { AppError } from '../errors.js';
 
 export async function handleModalSubmit(client: Client, interaction: ModalSubmitInteraction) {
   if (interaction.customId === MODAL_GIVEAWAY_CREATE) {
@@ -29,7 +30,7 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     const winnerCount = Number.parseInt(winnerCountRaw || '1', 10);
 
     if (!interaction.guildId || !interaction.channelId) {
-      throw new Error('Please run this command in a text channel within a server.');
+      throw new AppError('Please run this command in a text channel within a server.', 400);
     }
 
     const settings = await getGuildSettings(interaction.guildId);
@@ -58,7 +59,7 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
   }
 
   if (interaction.customId === MODAL_GIVEAWAY_SETTINGS) {
-    if (!interaction.guildId) throw new Error('Guild not found.');
+    if (!interaction.guildId) throw new AppError('Guild not found.', 404);
 
     const languageValues = interaction.fields.getStringSelectValues(FIELD_SETTINGS_LANGUAGE);
     const language = languageValues[0] ?? LANG_EN;

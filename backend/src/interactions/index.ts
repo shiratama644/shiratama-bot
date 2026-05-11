@@ -3,6 +3,7 @@ import { handleModalSubmit } from './modalSubmit.js';
 import { handleButton } from './button.js';
 import { commands } from '../commands/index.js';
 import { logger } from '../utils/logger.js';
+import { getErrorMessage } from '../errors.js';
 
 export async function handleInteraction(client: Client, interaction: Interaction) {
   try {
@@ -33,7 +34,7 @@ export async function handleInteraction(client: Client, interaction: Interaction
     }
   } catch (error) {
     logger.error('Interaction error:', error);
-    const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+    const message = getErrorMessage(error);
     const embed = new EmbedBuilder()
       .setColor(Colors.Red)
       .setTitle('❌ Error')

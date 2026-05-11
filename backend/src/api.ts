@@ -1,4 +1,4 @@
-import express, { Request } from 'express';
+import express, { Request, Response, RequestHandler } from 'express';
 import {
   getGiveaway,
   getActiveGiveaways,
@@ -22,6 +22,7 @@ const createSchema = z.object({
   deadline: z.string().min(1),
   winnerCount: z.number().int().min(1)
 });
+const guildBodySchema = z.object({ guildId: z.string().min(1) });
 
 function requireAdminToken(req: Request): void {
   const adminToken = process.env.ADMIN_API_TOKEN;
@@ -68,110 +69,104 @@ export function createApiServer(client: Client) {
     next();
   });
 
-  function handleApiError(error: unknown, res: express.Response) {
+  function handleApiError(error: unknown, res: Response) {
     const status = getErrorStatusCode(error);
     const message = getErrorMessage(error);
     res.status(status).json({ error: message });
   }
 
-  app.get('/api/roles/:guildId', async (req, res) => {
+  function withApiErrorHandling(handler: (req: Request, res: Response) => Promise<void>): RequestHandler {
+    return async (req: Request, res: Response) => {
+      try {
+        await handler(req, res);
+      } catch (error) {
+        handleApiError(error, res);
+      }
+    };
+  }
+
+  app.get('/api/roles/:guildId', withApiErrorHandling(async (req, res) => {
     const roleIds = await getManagerRoleIds(req.params.guildId);
     res.json({ roleIds });
-  });
+  }));
 
-  app.put('/api/roles/:guildId', async (req, res) => {
-    try {
-      requireAdminToken(req);
-      const body = rolesSchema.parse(req.body);
-      await setManagerRoleIds(req.params.guildId, body.roleIds);
-      res.json({ ok: true });
-    } catch (error) {
-      handleApiError(error, res);
-    }
-  });
+  app.put('/api/roles/:guildId', withApiErrorHandling(async (req, res) => {
+    requireAdminToken(req);
+    const body = rolesSchema.parse(req.body);
+    await setManagerRoleIds(req.params.guildId, body.roleIds);
+    res.json({ ok: true });
+  }));
 
-  app.get('/api/giveaways/:guildId', async (req, res) => {
+  app.get('/api/giveaways/:guildId', withApiErrorHandling(async (req, res) => {
     const giveaways = await getActiveGiveaways(req.params.guildId);
     res.json({ giveaways });
-  });
+  }));
 
-  app.post('/api/giveaways', async (req, res) => {
-    try {
-      requireAdminToken(req);
-      const body = createSchema.parse(req.body);
-      const userId = req.header('x-user-id');
-      if (!userId) {
-        throw new AppError('x-user-id header is required.', 400);
-      }
-
-      const managerRoleIds = await getManagerRoleIds(body.guildId);
-      if (managerRoleIds.length > 0) {
-        const guild = await client.guilds.fetch(body.guildId).catch(() => null);
-        if (!guild) {
-          throw new AppError('Guild not found.', 404);
-        }
-        const member = await guild.members.fetch(userId).catch(() => null);
-        if (!member) {
-          throw new AppError('User is not a member of this guild.', 403);
-        }
-        const hasManagerRole = managerRoleIds.some((id) => member.roles.cache.has(id));
-        if (!hasManagerRole) {
-          throw new AppError('You do not have permission to create giveaways.', 403);
-        }
-      }
-
-      const created = await createGiveawayPost({
-        client,
-        guildId: body.guildId,
-        channelId: body.channelId,
-        title: body.title,
-        description: body.description,
-        deadlineInput: body.deadline,
-        winnerCount: body.winnerCount,
-        createdBy: userId,
-        interval: undefined // Web API can be extended later if needed
-      });
-      res.json({ giveaway: created });
-    } catch (error) {
-      handleApiError(error, res);
+  app.post('/api/giveaways', withApiErrorHandling(async (req, res) => {
+    requireAdminToken(req);
+    const body = createSchema.parse(req.body);
+    const userId = req.header('x-user-id');
+    if (!userId) {
+      throw new AppError('x-user-id header is required.', 400);
     }
-  });
 
-  app.post('/api/giveaways/:id/end', async (req, res) => {
-    try {
-      requireAdminToken(req);
-      const guildId = z.object({ guildId: z.string().min(1) }).parse(req.body).guildId;
-      const giveaway = await getGiveaway(req.params.id);
-      if (!giveaway) {
-        throw new AppError('Giveaway not found.', 404);
+    const managerRoleIds = await getManagerRoleIds(body.guildId);
+    if (managerRoleIds.length > 0) {
+      const guild = await client.guilds.fetch(body.guildId).catch(() => null);
+      if (!guild) {
+        throw new AppError('Guild not found.', 404);
       }
-      if (giveaway.guildId !== guildId) {
-        throw new AppError('You cannot manage giveaways from other servers.', 403);
+      const member = await guild.members.fetch(userId).catch(() => null);
+      if (!member) {
+        throw new AppError('User is not a member of this guild.', 403);
       }
-      await endGiveaway(client, req.params.id);
-      res.json({ ok: true });
-    } catch (error) {
-      handleApiError(error, res);
+      const hasManagerRole = managerRoleIds.some((id) => member.roles.cache.has(id));
+      if (!hasManagerRole) {
+        throw new AppError('You do not have permission to create giveaways.', 403);
+      }
     }
-  });
 
-  app.post('/api/giveaways/:id/reroll', async (req, res) => {
-    try {
-      requireAdminToken(req);
-      const guildId = z.object({ guildId: z.string().min(1) }).parse(req.body).guildId;
-      const giveaway = await getGiveaway(req.params.id);
-      if (!giveaway) {
-        throw new AppError('Giveaway not found.', 404);
-      }
-      if (giveaway.guildId !== guildId) {
-        throw new AppError('You cannot manage giveaways from other servers.', 403);
-      }
-      const winners = await rerollGiveaway(client, req.params.id);
-      res.json({ winners });
-    } catch (error) {
-      handleApiError(error, res);
+    const created = await createGiveawayPost({
+      client,
+      guildId: body.guildId,
+      channelId: body.channelId,
+      title: body.title,
+      description: body.description,
+      deadlineInput: body.deadline,
+      winnerCount: body.winnerCount,
+      createdBy: userId,
+      interval: undefined // Web API can be extended later if needed
+    });
+    res.json({ giveaway: created });
+  }));
+
+  app.post('/api/giveaways/:id/end', withApiErrorHandling(async (req, res) => {
+    requireAdminToken(req);
+    const guildId = guildBodySchema.parse(req.body).guildId;
+    const giveaway = await getGiveaway(req.params.id);
+    if (!giveaway) {
+      throw new AppError('Giveaway not found.', 404);
     }
-  });
+    if (giveaway.guildId !== guildId) {
+      throw new AppError('You cannot manage giveaways from other servers.', 403);
+    }
+    await endGiveaway(client, req.params.id);
+    res.json({ ok: true });
+  }));
+
+  app.post('/api/giveaways/:id/reroll', withApiErrorHandling(async (req, res) => {
+    requireAdminToken(req);
+    const guildId = guildBodySchema.parse(req.body).guildId;
+    const giveaway = await getGiveaway(req.params.id);
+    if (!giveaway) {
+      throw new AppError('Giveaway not found.', 404);
+    }
+    if (giveaway.guildId !== guildId) {
+      throw new AppError('You cannot manage giveaways from other servers.', 403);
+    }
+    const winners = await rerollGiveaway(client, req.params.id);
+    res.json({ winners });
+  }));
 
   return app;
 }

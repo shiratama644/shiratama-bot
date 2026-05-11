@@ -163,7 +163,7 @@ export async function createGiveawayPost(params: {
 
   const channel = await params.client.channels.fetch(params.channelId);
   if (!channel || !(channel instanceof TextChannel)) {
-    throw new Error('Target channel not found.');
+    throw new AppError('Target channel not found.', 404);
   }
 
   const message = await channel.send({

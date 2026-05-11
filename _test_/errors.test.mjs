@@ -43,3 +43,16 @@ test('getErrorMessage returns AppError message', () => {
 test('getErrorMessage falls back for unknown error', () => {
   assert.equal(getErrorMessage('bad'), 'Error');
 });
+
+test('getErrorMessage summarizes ZodError issues', () => {
+  const zodError = new ZodError([
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      path: ['guildId'],
+      message: 'Expected string',
+      input: 1
+    }
+  ]);
+  assert.equal(getErrorMessage(zodError), 'guildId: Expected string');
+});
