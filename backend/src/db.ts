@@ -51,7 +51,7 @@ function getDb(): Kysely<Database> {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       logger.error('DATABASE_URL is not defined in environment variables');
-      throw new AppError('Database configuration error.', 500);
+      throw new AppError('DATABASE_URL environment variable is not configured.', 500);
     }
     pool = new Pool({
       connectionString
@@ -383,9 +383,9 @@ export async function markGiveawayEnded(id: string): Promise<void> {
 export async function toggleGiveawayEntry(giveawayId: string, userId: string): Promise<'joined' | 'left'> {
   return runDb(async () => {
     // Atomic toggle in a single statement:
-    // 1) Confirm giveaway exists and is active.
-    // 2) If user is already entered, delete the entry.
-    // 3) Otherwise insert an entry, tolerating concurrent inserts with ON CONFLICT DO NOTHING.
+    // - target: fetch giveaway status for existence + active-state checks
+    // - deleted: remove existing entry when giveaway is active
+    // - inserted: insert entry when active and no row was deleted (with conflict-safe insert)
     const result = await sql<{
       status: Giveaway['status'] | null;
       joined: boolean;
