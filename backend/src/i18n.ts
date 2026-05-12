@@ -166,10 +166,11 @@ export function normalizeLanguage(language?: string | null): BotLanguage {
 
 export function t(language: string | null | undefined, key: I18nKey, vars?: Record<string, string | number>): string {
   const dict = messages[normalizeLanguage(language)];
-  const template = dict[key];
+  const template = String(dict[key]);
   if (!vars) return template;
-  return Object.entries(vars).reduce(
-    (acc, [name, value]) => acc.replaceAll(`{${name}}`, String(value)),
-    template
-  );
+  let text = template;
+  for (const [name, value] of Object.entries(vars)) {
+    text = text.replaceAll(`{${name}}`, String(value));
+  }
+  return text;
 }
