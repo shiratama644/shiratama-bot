@@ -30,12 +30,15 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     const winnerCountRaw = interaction.fields.getTextInputValue(FIELD_CREATE_WINNERS);
     const winnerCount = Number.parseInt(winnerCountRaw || '1', 10);
 
-    if (!interaction.guildId || !interaction.channelId) {
+    if (!interaction.guildId) {
       throw new AppError(t('en', 'pleaseRunInTextChannelInServer'), 400);
     }
 
     const settings = await getGuildSettings(interaction.guildId);
     const language = settings.language;
+    if (!interaction.channelId) {
+      throw new AppError(t(language, 'pleaseRunInTextChannelInServer'), 400);
+    }
     const claimDeadline = settings.defaultClaimDeadline ?? null;
 
     logger.info(`Creating giveaway: ${title} in guild ${interaction.guildId}`);

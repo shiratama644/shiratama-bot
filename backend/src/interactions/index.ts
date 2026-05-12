@@ -38,7 +38,7 @@ export async function handleInteraction(client: Client, interaction: Interaction
     logger.error('Interaction error:', error);
     const message = getErrorMessage(error);
     const settings = interaction.guildId ? await getGuildSettings(interaction.guildId).catch(() => null) : null;
-    const language = settings?.language;
+    const language = settings?.language ?? 'en';
     const embed = new EmbedBuilder()
       .setColor(Colors.Red)
       .setTitle(t(language, 'errorTitle'))

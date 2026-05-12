@@ -147,6 +147,8 @@ export async function createGiveawayPost(params: {
   interval?: string;
   claimDeadline?: string | null;
 }) {
+  const settings = await getGuildSettings(params.guildId);
+  const language = settings.language;
   const endAt = parseDeadline(params.deadlineInput);
   const id = crypto.randomUUID();
 
@@ -166,12 +168,8 @@ export async function createGiveawayPost(params: {
 
   const channel = await params.client.channels.fetch(params.channelId);
   if (!channel || !(channel instanceof TextChannel)) {
-    const settings = await getGuildSettings(params.guildId);
-    throw new AppError(t(settings.language, 'targetChannelNotFound'), 404);
+    throw new AppError(t(language, 'targetChannelNotFound'), 404);
   }
-
-  const settings = await getGuildSettings(params.guildId);
-  const language = settings.language;
 
   const message = await channel.send({
     embeds: [
