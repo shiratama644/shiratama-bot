@@ -16,7 +16,7 @@
 10. `any` 使用を削除し型安全性を改善
 11. `gsettings` の矛盾コメント/実装を整理
 12. ルートの `logfile` を削除し `.gitignore` に追加
-13. `package-lock.json` を削除し lockfile 運用を `bun.lock` に統一
+13. `bun.lock` を削除し lockfile 運用を `package-lock.json` に統一
 14. Web API 作成権限でクライアント自己申告ロールを信頼しない実装へ変更（Discordメンバー情報で判定）
 15. Discordコマンド/API のギルド境界チェックを追加
 16. 更新系DB処理で対象なし更新をエラー化
@@ -27,6 +27,6 @@
 
 ## 検証
 
-- `bun run lint`
-- `bun run build`
-- `bun run test`
+- `npm run lint`
+- `npm run build`
+- `npm run test`
