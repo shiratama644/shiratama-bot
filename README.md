@@ -310,25 +310,25 @@ VITE_GUILD_ID=
 ## 8. セットアップ / 起動
 
 ```bash
-npm install
+pnpm install
 ```
 
 バックエンド開発起動:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 フロントエンド開発起動:
 
 ```bash
-npm run dev:web
+pnpm run dev:web
 ```
 
 同時起動:
 
 ```bash
-npm run dev:all
+pnpm run dev:all
 ```
 
 ---
@@ -336,9 +336,9 @@ npm run dev:all
 ## 9. 検証コマンド
 
 ```bash
-npm run lint
-npm run build
-npm run test
+pnpm run lint
+pnpm run build
+pnpm run test
 ```
 
 ---

@@ -4,12 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "npm run --workspace backend build && npm run --workspace web build",
-    "dev": "npm run --workspace backend dev",
-    "dev:web": "npm run --workspace web dev",
-    "dev:all": "concurrently -n backend,web -c blue,magenta \"npm run dev\" \"npm run dev:web\"",
-    "test": "npm run --workspace backend build && node --test _test_/*.test.mjs && npm run --workspace backend test",
-    "lint": "npm run --workspace backend lint && npm run --workspace web lint"
+    "build": "pnpm --filter backend build && pnpm --filter web build",
+    "dev": "pnpm --filter backend dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:all": "concurrently -n backend,web -c blue,magenta \"pnpm run dev\" \"pnpm run dev:web\"",
+    "test": "pnpm --filter backend build && node --test _test_/*.test.mjs && pnpm --filter backend test",
+    "lint": "pnpm --filter backend lint && pnpm --filter web lint"
   },
   "repository": {
     "type": "git",
@@ -24,11 +24,7 @@
   },
   "homepage": "https://github.com/shiratama644/applejp-bot#readme",
   "private": true,
-  "workspaces": [
-    "backend",
-    "web"
-  ],
-  "packageManager": "npm@10.9.0",
+  "packageManager": "pnpm@11.1.1",
   "devDependencies": {
     "concurrently": "^9.2.1"
   }
