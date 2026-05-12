@@ -12,11 +12,18 @@ import {
   refreshGiveawayMessage
 } from '../giveawayService.js';
 import { isUserEntered, addGiveawayEntry, removeGiveawayEntry } from '../db.js';
+import {
+  BUTTON_CLAIM_PREFIX,
+  BUTTON_COPY_PREFIX,
+  BUTTON_LEAVE_PREFIX,
+  BUTTON_TOGGLE_PREFIX,
+  buttonLeaveId
+} from '../ids.js';
 import { logger } from '../utils/logger.js';
 
 export async function handleButton(client: Client, interaction: ButtonInteraction) {
-  if (interaction.customId.startsWith('copy_id_')) {
-    const id = interaction.customId.slice('copy_id_'.length);
+  if (interaction.customId.startsWith(BUTTON_COPY_PREFIX)) {
+    const id = interaction.customId.slice(BUTTON_COPY_PREFIX.length);
     await interaction.reply({
       content: `📋 **Giveaway ID:** \`${id}\``,
       ephemeral: true
@@ -24,7 +31,7 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
     return;
   }
 
-  if (interaction.customId.startsWith('claim_prize_')) {
+  if (interaction.customId.startsWith(BUTTON_CLAIM_PREFIX)) {
     await interaction.reply({
       content: '🎫 Your claim request has been received. Staff will create a private channel for you shortly.',
       ephemeral: true
@@ -32,8 +39,8 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
     return;
   }
 
-  if (interaction.customId.startsWith('giveaway:toggle:')) {
-    const giveawayId = interaction.customId.split(':')[2];
+  if (interaction.customId.startsWith(BUTTON_TOGGLE_PREFIX)) {
+    const giveawayId = interaction.customId.slice(BUTTON_TOGGLE_PREFIX.length);
 
     logger.info(`User ${interaction.user.id} toggling entry for giveaway ${giveawayId}`);
 
@@ -47,7 +54,7 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
         .setDescription('You have already entered this giveaway.');
       const leaveRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-          .setCustomId(`giveaway:leave:${giveawayId}`)
+          .setCustomId(buttonLeaveId(giveawayId))
           .setLabel('Leave Giveaway')
           .setStyle(ButtonStyle.Danger)
       );
@@ -68,8 +75,8 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
     return;
   }
 
-  if (interaction.customId.startsWith('giveaway:leave:')) {
-    const giveawayId = interaction.customId.split(':')[2];
+  if (interaction.customId.startsWith(BUTTON_LEAVE_PREFIX)) {
+    const giveawayId = interaction.customId.slice(BUTTON_LEAVE_PREFIX.length);
 
     logger.info(`User ${interaction.user.id} leaving giveaway ${giveawayId}`);
 

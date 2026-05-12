@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { AppError, getErrorMessage, getErrorStatusCode } from '../backend/dist/errors.js';
-import { ZodError } from '../backend/node_modules/zod/index.js';
+import { ZodError } from 'zod';
 
 test('AppError has correct name, message, and statusCode', () => {
   const error = new AppError('something went wrong', 422);
@@ -42,4 +42,17 @@ test('getErrorMessage returns AppError message', () => {
 
 test('getErrorMessage falls back for unknown error', () => {
   assert.equal(getErrorMessage('bad'), 'Error');
+});
+
+test('getErrorMessage summarizes ZodError issues', () => {
+  const zodError = new ZodError([
+    {
+      code: 'invalid_type',
+      expected: 'string',
+      path: ['guildId'],
+      message: 'Expected string',
+      input: 1
+    }
+  ]);
+  assert.equal(getErrorMessage(zodError), 'guildId: Expected string');
 });

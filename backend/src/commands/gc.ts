@@ -10,6 +10,17 @@ import {
 } from 'discord.js';
 import { Command } from './index.js';
 import { assertCanManageGiveaways } from './permissions.js';
+import {
+    FIELD_CREATE_AUTOREP,
+    FIELD_CREATE_DESCRIPTION,
+    FIELD_CREATE_DURATION,
+    FIELD_CREATE_PRIZE,
+    FIELD_CREATE_WINNERS,
+    MODAL_GIVEAWAY_CREATE,
+    VALUE_AUTOREP_DISABLE,
+    VALUE_AUTOREP_ENABLE,
+    VALUE_DEFAULT_WINNERS
+} from '../ids.js';
 
 export const gcCommand: Command = {
     name: 'gc',
@@ -20,13 +31,13 @@ export const gcCommand: Command = {
         interaction.showModal(
             new ModalBuilder()
                 .setTitle("Giveaway Create")
-                .setCustomId("giveaway:create")
+                .setCustomId(MODAL_GIVEAWAY_CREATE)
                 .addLabelComponents(
                     new LabelBuilder()
                         .setLabel("Prize")
                         .setTextInputComponent(
                             new TextInputBuilder()
-                                .setCustomId("prize")
+                                .setCustomId(FIELD_CREATE_PRIZE)
                                 .setStyle(TextInputStyle.Short)
                                 .setPlaceholder("10M etc..")
                                 .setMinLength(1)
@@ -38,16 +49,16 @@ export const gcCommand: Command = {
                         .setLabel("Auto Repeating")
                         .setStringSelectMenuComponent(
                             new StringSelectMenuBuilder()
-                                .setCustomId("autorep")
+                                .setCustomId(FIELD_CREATE_AUTOREP)
                                 .setMinValues(1)
                                 .setMaxValues(1)
                                 .addOptions(
                                     new StringSelectMenuOptionBuilder()
                                         .setLabel("Disable")
-                                        .setValue("disable"),
+                                        .setValue(VALUE_AUTOREP_DISABLE),
                                     new StringSelectMenuOptionBuilder()
                                         .setLabel("Enable")
-                                        .setValue("enable")
+                                        .setValue(VALUE_AUTOREP_ENABLE)
                                 )
                         )
                 )
@@ -57,7 +68,7 @@ export const gcCommand: Command = {
                         .setDescription("If Auto Repeating is enabled, you need to enter an Interval here.")
                         .setTextInputComponent(
                             new TextInputBuilder()
-                                .setCustomId("duration")
+                                .setCustomId(FIELD_CREATE_DURATION)
                                 .setStyle(TextInputStyle.Short)
                                 .setPlaceholder(">= 1m, 1h, 1d10m etc..")
                                 .setMinLength(1)
@@ -68,10 +79,10 @@ export const gcCommand: Command = {
                         .setLabel("Number of Winners")
                         .setTextInputComponent(
                             new TextInputBuilder()
-                                .setCustomId("winners")
+                                .setCustomId(FIELD_CREATE_WINNERS)
                                 .setStyle(TextInputStyle.Short)
-                                .setPlaceholder("1")
-                                .setValue("1")
+                                .setPlaceholder(VALUE_DEFAULT_WINNERS)
+                                .setValue(VALUE_DEFAULT_WINNERS)
                                 .setMinLength(1)
                         )
                 )
@@ -80,7 +91,7 @@ export const gcCommand: Command = {
                         .setLabel("Description")
                         .setTextInputComponent(
                             new TextInputBuilder()
-                                .setCustomId("description")
+                                .setCustomId(FIELD_CREATE_DESCRIPTION)
                                 .setStyle(TextInputStyle.Paragraph)
                                 .setRequired(false)
                         )

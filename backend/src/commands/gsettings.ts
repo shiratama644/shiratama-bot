@@ -6,12 +6,23 @@ import {
     LabelBuilder,
     ModalBuilder,
     RoleSelectMenuBuilder,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
     TextInputBuilder,
     TextInputStyle
 } from 'discord.js';
 import { Command } from './index.js';
 import { getGuildSettings } from '../db.js';
 import { assertCanManageGiveaways } from './permissions.js';
+import {
+    FIELD_SETTINGS_DEFCLAIM,
+    FIELD_SETTINGS_LANGUAGE,
+    FIELD_SETTINGS_WHERE,
+    FIELD_SETTINGS_WHO,
+    LANG_EN,
+    LANG_JA,
+    MODAL_GIVEAWAY_SETTINGS
+} from '../ids.js';
 
 export const gsettingsCommand: Command = {
     name: 'gsettings',
@@ -24,13 +35,33 @@ export const gsettingsCommand: Command = {
         await interaction.showModal(
             new ModalBuilder()
                 .setTitle("Giveaway Settings")
-                .setCustomId("giveaway:settings")
+                .setCustomId(MODAL_GIVEAWAY_SETTINGS)
+                .addLabelComponents(
+                    new LabelBuilder()
+                        .setLabel("Language")
+                        .setStringSelectMenuComponent(
+                            new StringSelectMenuBuilder()
+                                .setCustomId(FIELD_SETTINGS_LANGUAGE)
+                                .addOptions(
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel("English")
+                                        .setValue(LANG_EN)
+                                        .setEmoji("🇺🇸")
+                                        .setDefault(settings.language !== LANG_JA),
+                                    new StringSelectMenuOptionBuilder()
+                                        .setLabel("Japanese")
+                                        .setValue(LANG_JA)
+                                        .setEmoji("🇯🇵")
+                                        .setDefault(settings.language === LANG_JA)
+                                )
+                        )
+                )
                 .addLabelComponents(
                     new LabelBuilder()
                         .setLabel("Who Can Create a Giveaway")
                         .setRoleSelectMenuComponent(
                             new RoleSelectMenuBuilder()
-                                .setCustomId("giveaway:who")
+                                .setCustomId(FIELD_SETTINGS_WHO)
                                 .setMinValues(1)
                                 .setMaxValues(25)
                                 .setDefaultRoles(settings.managerRoleIds)
@@ -41,7 +72,7 @@ export const gsettingsCommand: Command = {
                         .setLabel("Where Can We Create a Giveaway?")
                         .setChannelSelectMenuComponent(
                             new ChannelSelectMenuBuilder()
-                                .setCustomId("giveaway:where")
+                                .setCustomId(FIELD_SETTINGS_WHERE)
                                 .setMinValues(1)
                                 .setMaxValues(25)
                                 .setChannelTypes([ChannelType.GuildText])
@@ -53,7 +84,7 @@ export const gsettingsCommand: Command = {
                         .setLabel("Default Claim Deadline")
                         .setTextInputComponent(
                             new TextInputBuilder()
-                                .setCustomId("defclaim")
+                                .setCustomId(FIELD_SETTINGS_DEFCLAIM)
                                 .setStyle(TextInputStyle.Short)
                                 .setPlaceholder("10m, 1h, 3d, 1w")
                                 .setRequired(false)

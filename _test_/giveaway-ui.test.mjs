@@ -13,7 +13,7 @@ test('giveawayButton builds primary button with giveaway custom id', () => {
   assert.equal(enterButton.data.style, 1);
   assert.equal(enterButton.data.disabled, false);
 
-  assert.equal(copyButton.data.custom_id, 'copy_id_g1');
+  assert.equal(copyButton.data.custom_id, 'giveaway:copy:g1');
   assert.equal(copyButton.data.label, 'Copy ID');
 });
 
@@ -31,7 +31,7 @@ test('giveawayButtons returns the same structure as giveawayButton', () => {
 
   assert.equal(enterButton.data.custom_id, 'giveaway:toggle:g2');
   assert.equal(enterButton.data.disabled, false);
-  assert.equal(copyButton.data.custom_id, 'copy_id_g2');
+  assert.equal(copyButton.data.custom_id, 'giveaway:copy:g2');
 });
 
 test('giveawayButtons supports disabled state', () => {

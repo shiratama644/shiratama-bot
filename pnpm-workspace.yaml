@@ -1,5 +1,0 @@
-packages:
-  - backend
-  - web
-allowBuilds:
-  esbuild: true
