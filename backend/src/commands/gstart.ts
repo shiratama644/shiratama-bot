@@ -1,9 +1,9 @@
 import { ChatInputCommandInteraction, Client, AutocompleteInteraction } from 'discord.js';
 import { Command } from './index.js';
-import { startGiveawayAutoRepeat } from '../giveawayService.js';
-import { getActiveGiveaways } from '../db.js';
+import { startGiveawayAutoRepeat } from '../giveaway/index.js';
+import { getActiveGiveaways } from '../db/index.js';
 import { assertCanManageGiveaways } from './permissions.js';
-import { ensureGiveawayInGuild } from '../giveawayService.js';
+import { ensureGiveawayInGuild } from '../giveaway/index.js';
 
 export const gstartCommand: Command = {
   name: 'gstart',

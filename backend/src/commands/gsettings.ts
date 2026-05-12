@@ -12,7 +12,7 @@ import {
     TextInputStyle
 } from 'discord.js';
 import { Command } from './index.js';
-import { getGuildSettings } from '../db.js';
+import { getGuildSettings } from '../db/index.js';
 import { assertCanManageGiveaways } from './permissions.js';
 import {
     FIELD_SETTINGS_DEFCLAIM,

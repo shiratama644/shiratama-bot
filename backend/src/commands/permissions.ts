@@ -1,5 +1,5 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { getManagerRoleIds } from '../db.js';
+import { getManagerRoleIds } from '../db/index.js';
 import { AppError } from '../errors.js';
 
 export function hasAnyRequiredRole(memberRoleIds: ReadonlySet<string>, requiredRoleIds: readonly string[]): boolean {

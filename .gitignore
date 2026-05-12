@@ -126,14 +126,8 @@ dist
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
-# yarn v3
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
+# pnpm
+.pnpm-store/
 
 # Vite logs files
 vite.config.js.timestamp-*

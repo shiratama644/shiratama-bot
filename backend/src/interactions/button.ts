@@ -10,8 +10,8 @@ import {
 import {
   ensureGiveawayIsActive,
   refreshGiveawayMessage
-} from '../giveawayService.js';
-import { isUserEntered, addGiveawayEntry, removeGiveawayEntry } from '../db.js';
+} from '../giveaway/index.js';
+import { isUserEntered, addGiveawayEntry, removeGiveawayEntry } from '../db/index.js';
 import {
   BUTTON_CLAIM_PREFIX,
   BUTTON_COPY_PREFIX,
