@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, Client, AutocompleteInteraction } from 'discord.js';
 import { Command } from './index.js';
-import { ensureGiveawayInGuild, rerollGiveaway } from '../giveawayService.js';
-import { getEndedGiveaways } from '../db.js';
+import { ensureGiveawayInGuild, rerollGiveaway } from '../giveaway/index.js';
+import { getEndedGiveaways } from '../db/index.js';
 import { assertCanManageGiveaways } from './permissions.js';
 
 export const grerollCommand: Command = {

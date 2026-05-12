@@ -4,8 +4,8 @@ import {
   getActiveGiveaways,
   getManagerRoleIds,
   setManagerRoleIds
-} from './db.js';
-import { createGiveawayPost, endGiveaway, rerollGiveaway } from './giveawayService.js';
+} from './db/index.js';
+import { createGiveawayPost, endGiveaway, rerollGiveaway } from './giveaway/index.js';
 import type { Client } from 'discord.js';
 import { z } from 'zod';
 import { AppError, getErrorMessage, getErrorStatusCode } from './errors.js';

@@ -19,23 +19,13 @@ import {
   toggleGiveawayEntry,
   updateGiveawayAutoRepeat,
   updateGiveawayStatus
-} from './db.js';
-import { parseDeadline } from './deadline.js';
-import { AppError } from './errors.js';
-import { buttonClaimId, buttonCopyId, buttonToggleId, embedClaimFooterText } from './ids.js';
-import type { Giveaway, GiveawayStatus } from './types.js';
-import { logger } from './utils/logger.js';
-
-function parseDurationSeconds(duration: string): number {
-  const match = duration.trim().match(/^(\d+)(m|h|d)$/i);
-  if (!match) return 0;
-  const amount = Number(match[1]);
-  const unit = match[2].toLowerCase();
-  if (unit === 'm') return amount * 60;
-  if (unit === 'h') return amount * 3600;
-  if (unit === 'd') return amount * 86400;
-  return 0;
-}
+} from '../db/index.js';
+import { parseDeadline } from '../deadline.js';
+import { AppError } from '../errors.js';
+import { buttonClaimId, embedClaimFooterText } from '../ids.js';
+import type { Giveaway } from '../types.js';
+import { logger } from '../utils/logger.js';
+import { giveawayButtons, giveawayEmbed, parseDurationSeconds } from './embed.js';
 
 function formatWinnerMentions(winners: string[]): string {
   return winners.map(id => userMention(id)).join(', ');
@@ -51,148 +41,9 @@ function calculateClaimDeadlineTimestamp(giveaway: { endAt: Date; claimDeadline:
   return Math.floor(giveaway.endAt.getTime() / 1000) + claimDeadlineSecs;
 }
 
-export function giveawayButtons(giveawayId: string, disabled = false): ActionRowBuilder<ButtonBuilder> {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(buttonToggleId(giveawayId))
-      .setEmoji('🎉')
-      .setLabel('Enter')
-      .setStyle(ButtonStyle.Primary)
-      .setDisabled(disabled),
-    new ButtonBuilder()
-      .setCustomId(buttonCopyId(giveawayId))
-      .setLabel('Copy ID')
-      .setEmoji('📋')
-      .setStyle(ButtonStyle.Secondary)
-  );
-}
-
-/** @deprecated Use giveawayButtons instead */
-export function giveawayButton(giveawayId: string, disabled = false): ActionRowBuilder<ButtonBuilder> {
-  return giveawayButtons(giveawayId, disabled);
-}
-
-export function giveawayEmbed(params: {
-  id: string;
-  title: string;
-  description?: string | null;
-  endAt: Date;
-  winnerCount: number;
-  entries: number;
-  status: GiveawayStatus;
-  createdBy: string;
-  winners?: string[];
-  interval?: string | null;
-  autoRepeat?: boolean;
-  claimDeadline?: string | null;
-}): EmbedBuilder {
-  const isEnded = params.status !== 'active';
-  const color = params.status === 'active' ? Colors.Green : Colors.Red;
-  const endTimestamp = Math.floor(params.endAt.getTime() / 1000);
-  const winners = params.winners ?? [];
-
-  const descLines: string[] = [
-    `⏱️ **${isEnded ? 'Ended' : 'Ends'}:** <t:${endTimestamp}:R> (<t:${endTimestamp}:f>)`,
-    `🎙️ **Host:** <@${params.createdBy}>`,
-    `🎟️ **Entries:** ${params.entries}`,
-    `👑 **Winners:** ${!isEnded
-      ? String(params.winnerCount)
-      : (winners.length > 0
-          ? winners.map(id => `<@${id}>`).join(', ')
-          : 'No winners')
-    }`
-  ];
-
-  const effectiveClaimDeadline = params.claimDeadline && params.claimDeadline !== 'def'
-    ? params.claimDeadline
-    : null;
-  if (effectiveClaimDeadline) {
-    if (isEnded) {
-      const claimDeadlineSecs = parseDurationSeconds(effectiveClaimDeadline);
-      const claimDeadlineTs = endTimestamp + claimDeadlineSecs;
-      descLines.push(`⏰ **Claim Deadline:** <t:${claimDeadlineTs}:R> (<t:${claimDeadlineTs}:f>)`);
-    } else {
-      descLines.push(`⏰ **Claim Window:** \`${effectiveClaimDeadline}\` after end`);
-    }
-  }
-
-  if (params.autoRepeat && params.interval) {
-    descLines.push(`🔄 **Repeats:** Every \`${params.interval}\``);
-  }
-
-  if (params.description) {
-    descLines.push('', params.description);
-  }
-
-  return new EmbedBuilder()
-    .setColor(color)
-    .setAuthor({ name: params.title })
-    .setDescription(descLines.join('\n'))
-    .setFooter({ text: isEnded ? 'Ended' : 'Click 🎉 Enter to participate' })
-    .setTimestamp(params.endAt);
-}
-
-export async function createGiveawayPost(params: {
-  client: Client;
-  guildId: string;
-  channelId: string;
-  title: string;
-  description?: string;
-  deadlineInput: string;
-  winnerCount: number;
-  createdBy: string;
-  interval?: string;
-  claimDeadline?: string | null;
-}) {
-  const endAt = parseDeadline(params.deadlineInput);
-  const id = crypto.randomUUID();
-
-  const giveaway = await createGiveaway({
-    id,
-    guildId: params.guildId,
-    channelId: params.channelId,
-    title: params.title,
-    description: params.description?.trim() || null,
-    endAt,
-    winnerCount: Math.max(1, Math.floor(params.winnerCount)),
-    createdBy: params.createdBy,
-    interval: params.interval || null,
-    autoRepeat: !!params.interval,
-    claimDeadline: params.claimDeadline || null
-  });
-
-  const channel = await params.client.channels.fetch(params.channelId);
-  if (!channel || !(channel instanceof TextChannel)) {
-    throw new AppError('Target channel not found.', 404);
-  }
-
-  const message = await channel.send({
-    embeds:[
-      giveawayEmbed({
-        id: giveaway.id,
-        title: giveaway.title,
-        description: giveaway.description,
-        endAt: giveaway.endAt,
-        winnerCount: giveaway.winnerCount,
-        entries: 0,
-        status: 'active',
-        createdBy: giveaway.createdBy,
-        winners: [],
-        interval: giveaway.interval,
-        autoRepeat: giveaway.autoRepeat,
-        claimDeadline: giveaway.claimDeadline
-      })
-    ],
-    components:[giveawayButtons(giveaway.id)]
-  });
-
-  await setGiveawayMessageId(giveaway.id, message.id);
-  return { ...giveaway, messageId: message.id };
-}
-
 function pickWinners(participants: string[], winnerCount: number): string[] {
   const copied = [...participants];
-  const winners: string[] =[];
+  const winners: string[] = [];
   while (copied.length > 0 && winners.length < winnerCount) {
     const index = Math.floor(Math.random() * copied.length);
     winners.push(copied[index]);
@@ -256,7 +107,7 @@ export async function refreshGiveawayMessage(client: Client, giveawayId: string)
 
   const entries = await countEntries(giveaway.id);
   await message.edit({
-    embeds:[
+    embeds: [
       giveawayEmbed({
         id: giveaway.id,
         title: giveaway.title,
@@ -274,6 +125,64 @@ export async function refreshGiveawayMessage(client: Client, giveawayId: string)
     ],
     components: [giveawayButtons(giveaway.id, giveaway.status !== 'active')]
   });
+}
+
+export async function createGiveawayPost(params: {
+  client: Client;
+  guildId: string;
+  channelId: string;
+  title: string;
+  description?: string;
+  deadlineInput: string;
+  winnerCount: number;
+  createdBy: string;
+  interval?: string;
+  claimDeadline?: string | null;
+}) {
+  const endAt = parseDeadline(params.deadlineInput);
+  const id = crypto.randomUUID();
+
+  const giveaway = await createGiveaway({
+    id,
+    guildId: params.guildId,
+    channelId: params.channelId,
+    title: params.title,
+    description: params.description?.trim() || null,
+    endAt,
+    winnerCount: Math.max(1, Math.floor(params.winnerCount)),
+    createdBy: params.createdBy,
+    interval: params.interval || null,
+    autoRepeat: !!params.interval,
+    claimDeadline: params.claimDeadline || null
+  });
+
+  const channel = await params.client.channels.fetch(params.channelId);
+  if (!channel || !(channel instanceof TextChannel)) {
+    throw new AppError('Target channel not found.', 404);
+  }
+
+  const message = await channel.send({
+    embeds: [
+      giveawayEmbed({
+        id: giveaway.id,
+        title: giveaway.title,
+        description: giveaway.description,
+        endAt: giveaway.endAt,
+        winnerCount: giveaway.winnerCount,
+        entries: 0,
+        status: 'active',
+        createdBy: giveaway.createdBy,
+        winners: [],
+        interval: giveaway.interval,
+        autoRepeat: giveaway.autoRepeat,
+        claimDeadline: giveaway.claimDeadline
+      })
+    ],
+    components: [giveawayButtons(giveaway.id)]
+  });
+
+  await setGiveawayMessageId(giveaway.id, message.id);
+  return { ...giveaway, messageId: message.id };
 }
 
 export async function endGiveaway(client: Client, giveawayId: string, manualEnd = false): Promise<void> {

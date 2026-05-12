@@ -4,8 +4,8 @@ import {
   REST,
   Routes
 } from 'discord.js';
-import { getDueGiveaways } from './db.js';
-import { endGiveaway } from './giveawayService.js';
+import { getDueGiveaways } from './db/index.js';
+import { endGiveaway } from './giveaway/index.js';
 import { handleInteraction } from './interactions/index.js';
 import { commands } from './commands/index.js';
 import { logger } from './utils/logger.js';

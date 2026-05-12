@@ -1,6 +1,6 @@
 import { ModalSubmitInteraction, Client } from 'discord.js';
-import { createGiveawayPost } from '../giveawayService.js';
-import { getGuildSettings, setGuildSettings } from '../db.js';
+import { createGiveawayPost } from '../giveaway/index.js';
+import { getGuildSettings, setGuildSettings } from '../db/index.js';
 import {
   FIELD_CREATE_AUTOREP,
   FIELD_CREATE_DESCRIPTION,

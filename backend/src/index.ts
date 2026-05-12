@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { buildClient } from './bot.js';
 import { createApiServer } from './api.js';
-import { initSchema } from './db.js';
+import { initSchema } from './db/index.js';
 
 dotenv.config();
 

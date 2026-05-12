@@ -1,0 +1,40 @@
+import type { ColumnType } from 'kysely';
+import type { Giveaway } from '../types.js';
+
+export interface GuildSettingsTable {
+  guild_id: string;
+  manager_role_ids: ColumnType<string[], string[] | undefined, string[]>;
+  language: ColumnType<string, string | undefined, string>;
+  giveaway_channel_ids: ColumnType<string[], string[] | undefined, string[]>;
+  default_claim_deadline: ColumnType<string | null, string | null | undefined, string | null>;
+}
+
+export interface GiveawaysTable {
+  id: string;
+  guild_id: string;
+  channel_id: string;
+  message_id: ColumnType<string | null, string | null | undefined, string | null>;
+  title: string;
+  description: ColumnType<string | null, string | null | undefined, string | null>;
+  end_at: Date;
+  winner_count: number;
+  status: ColumnType<Giveaway['status'], Giveaway['status'] | undefined, Giveaway['status']>;
+  created_by: string;
+  created_at: ColumnType<Date, Date | undefined, Date>;
+  interval: ColumnType<string | null, string | null | undefined, string | null>;
+  auto_repeat: ColumnType<boolean, boolean | undefined, boolean>;
+  claim_deadline: ColumnType<string | null, string | null | undefined, string | null>;
+  winners: ColumnType<string[], string[] | undefined, string[]>;
+}
+
+export interface GiveawayEntriesTable {
+  giveaway_id: string;
+  user_id: string;
+  joined_at: ColumnType<Date, Date | undefined, Date>;
+}
+
+export interface Database {
+  guild_settings: GuildSettingsTable;
+  giveaways: GiveawaysTable;
+  giveaway_entries: GiveawayEntriesTable;
+}
