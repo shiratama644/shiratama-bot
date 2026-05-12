@@ -20,11 +20,11 @@ import {
   buttonLeaveId
 } from '../ids.js';
 import { logger } from '../utils/logger.js';
-import { t } from '../i18n.js';
+import { DEFAULT_LANGUAGE, t } from '../i18n.js';
 
 export async function handleButton(client: Client, interaction: ButtonInteraction) {
   const settings = interaction.guildId ? await getGuildSettings(interaction.guildId) : null;
-  const language = settings?.language ?? 'en';
+  const language = settings?.language ?? DEFAULT_LANGUAGE;
 
   if (interaction.customId.startsWith(BUTTON_COPY_PREFIX)) {
     const id = interaction.customId.slice(BUTTON_COPY_PREFIX.length);

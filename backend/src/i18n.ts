@@ -159,9 +159,10 @@ const messages = {
 
 export type BotLanguage = keyof typeof messages;
 export type I18nKey = keyof typeof messages.en;
+export const DEFAULT_LANGUAGE: BotLanguage = LANG_EN;
 
 export function normalizeLanguage(language?: string | null): BotLanguage {
-  return language === LANG_JA ? LANG_JA : LANG_EN;
+  return language === LANG_JA ? LANG_JA : DEFAULT_LANGUAGE;
 }
 
 export function t(language: string | null | undefined, key: I18nKey, vars?: Record<string, string | number>): string {

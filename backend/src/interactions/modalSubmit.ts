@@ -18,7 +18,7 @@ import {
 } from '../ids.js';
 import { logger } from '../utils/logger.js';
 import { AppError } from '../errors.js';
-import { t } from '../i18n.js';
+import { DEFAULT_LANGUAGE, t } from '../i18n.js';
 
 export async function handleModalSubmit(client: Client, interaction: ModalSubmitInteraction) {
   if (interaction.customId === MODAL_GIVEAWAY_CREATE) {
@@ -31,7 +31,7 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     const winnerCount = Number.parseInt(winnerCountRaw || '1', 10);
 
     if (!interaction.guildId) {
-      throw new AppError(t('en', 'pleaseRunInTextChannelInServer'), 400);
+      throw new AppError(t(DEFAULT_LANGUAGE, 'pleaseRunInTextChannelInServer'), 400);
     }
 
     const settings = await getGuildSettings(interaction.guildId);
@@ -67,7 +67,7 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
   }
 
   if (interaction.customId === MODAL_GIVEAWAY_SETTINGS) {
-    if (!interaction.guildId) throw new AppError(t('en', 'guildNotFound'), 404);
+    if (!interaction.guildId) throw new AppError(t(DEFAULT_LANGUAGE, 'guildNotFound'), 404);
 
     const languageValues = interaction.fields.getStringSelectValues(FIELD_SETTINGS_LANGUAGE);
     const language = languageValues[0] ?? LANG_EN;

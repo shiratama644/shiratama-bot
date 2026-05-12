@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { getGuildSettings, getManagerRoleIds } from '../db/index.js';
 import { AppError } from '../errors.js';
-import { t } from '../i18n.js';
+import { DEFAULT_LANGUAGE, t } from '../i18n.js';
 
 export function hasAnyRequiredRole(memberRoleIds: ReadonlySet<string>, requiredRoleIds: readonly string[]): boolean {
   return requiredRoleIds.some((roleId) => memberRoleIds.has(roleId));
@@ -9,7 +9,7 @@ export function hasAnyRequiredRole(memberRoleIds: ReadonlySet<string>, requiredR
 
 export async function assertCanManageGiveaways(interaction: ChatInputCommandInteraction): Promise<void> {
   if (!interaction.guildId) {
-    throw new AppError(t('en', 'pleaseRunInServer'), 400);
+    throw new AppError(t(DEFAULT_LANGUAGE, 'pleaseRunInServer'), 400);
   }
 
   const settings = await getGuildSettings(interaction.guildId);

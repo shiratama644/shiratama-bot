@@ -27,7 +27,7 @@ import { buttonClaimId, embedClaimFooterText } from '../ids.js';
 import type { Giveaway } from '../types.js';
 import { logger } from '../utils/logger.js';
 import { giveawayButtons, giveawayEmbed, parseDurationSeconds } from './embed.js';
-import { t } from '../i18n.js';
+import { DEFAULT_LANGUAGE, t } from '../i18n.js';
 
 function formatWinnerMentions(winners: string[]): string {
   return winners.map(id => userMention(id)).join(', ');
@@ -64,7 +64,7 @@ export async function toggleEntryAndBuildMessage(giveawayId: string, userId: str
 export async function getGiveawayOrThrow(giveawayId: string): Promise<Giveaway> {
   const giveaway = await getGiveaway(giveawayId);
   if (!giveaway) {
-    throw new AppError(t('en', 'giveawayNotFound'), 404);
+    throw new AppError(t(DEFAULT_LANGUAGE, 'giveawayNotFound'), 404);
   }
   return giveaway;
 }
@@ -290,7 +290,7 @@ export async function startGiveawayAutoRepeat(giveawayId: string): Promise<void>
   if (giveaway && giveaway.interval) {
     await updateGiveawayAutoRepeat(giveawayId, true);
   } else {
-    const language = giveaway ? (await getGuildSettings(giveaway.guildId)).language : 'en';
+    const language = giveaway ? (await getGuildSettings(giveaway.guildId)).language : DEFAULT_LANGUAGE;
     throw new AppError(t(language, 'noAutoRepeatIntervalSet'), 409);
   }
 }

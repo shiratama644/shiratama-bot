@@ -22,7 +22,7 @@ import {
     VALUE_AUTOREP_ENABLE,
     VALUE_DEFAULT_WINNERS
 } from '../ids.js';
-import { t } from '../i18n.js';
+import { DEFAULT_LANGUAGE, t } from '../i18n.js';
 
 export const gcCommand: Command = {
     name: 'gc',
@@ -30,7 +30,7 @@ export const gcCommand: Command = {
     execute: async (client: Client, interaction: ChatInputCommandInteraction) => {
         await assertCanManageGiveaways(interaction);
         const settings = interaction.guildId ? await getGuildSettings(interaction.guildId) : null;
-        const language = settings?.language;
+        const language = settings?.language ?? DEFAULT_LANGUAGE;
 
         interaction.showModal(
             new ModalBuilder()

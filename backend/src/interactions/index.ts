@@ -5,7 +5,7 @@ import { commands } from '../commands/index.js';
 import { logger } from '../utils/logger.js';
 import { getErrorMessage } from '../errors.js';
 import { getGuildSettings } from '../db/index.js';
-import { t } from '../i18n.js';
+import { DEFAULT_LANGUAGE, t } from '../i18n.js';
 
 export async function handleInteraction(client: Client, interaction: Interaction) {
   try {
@@ -38,7 +38,7 @@ export async function handleInteraction(client: Client, interaction: Interaction
     logger.error('Interaction error:', error);
     const message = getErrorMessage(error);
     const settings = interaction.guildId ? await getGuildSettings(interaction.guildId).catch(() => null) : null;
-    const language = settings?.language ?? 'en';
+    const language = settings?.language ?? DEFAULT_LANGUAGE;
     const embed = new EmbedBuilder()
       .setColor(Colors.Red)
       .setTitle(t(language, 'errorTitle'))

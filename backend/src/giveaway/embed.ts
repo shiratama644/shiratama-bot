@@ -7,7 +7,7 @@ import {
 } from 'discord.js';
 import { buttonCopyId, buttonToggleId } from '../ids.js';
 import type { GiveawayStatus } from '../types.js';
-import { t } from '../i18n.js';
+import { DEFAULT_LANGUAGE, t } from '../i18n.js';
 
 export function parseDurationSeconds(duration: string): number {
   const match = duration.trim().match(/^(\d+)(m|h|d)$/i);
@@ -20,7 +20,7 @@ export function parseDurationSeconds(duration: string): number {
   return 0;
 }
 
-export function giveawayButtons(giveawayId: string, disabled = false, language = 'en'): ActionRowBuilder<ButtonBuilder> {
+export function giveawayButtons(giveawayId: string, disabled = false, language: string = DEFAULT_LANGUAGE): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(buttonToggleId(giveawayId))
@@ -37,7 +37,7 @@ export function giveawayButtons(giveawayId: string, disabled = false, language =
 }
 
 /** @deprecated Use giveawayButtons instead */
-export function giveawayButton(giveawayId: string, disabled = false, language = 'en'): ActionRowBuilder<ButtonBuilder> {
+export function giveawayButton(giveawayId: string, disabled = false, language: string = DEFAULT_LANGUAGE): ActionRowBuilder<ButtonBuilder> {
   return giveawayButtons(giveawayId, disabled, language);
 }
 
@@ -60,7 +60,7 @@ export function giveawayEmbed(params: {
   const color = params.status === 'active' ? Colors.Green : Colors.Red;
   const endTimestamp = Math.floor(params.endAt.getTime() / 1000);
   const winners = params.winners ?? [];
-  const language = params.language ?? 'en';
+  const language = params.language ?? DEFAULT_LANGUAGE;
 
   const descLines: string[] = [
     `⏱️ **${isEnded ? t(language, 'ended') : t(language, 'ends')}:** <t:${endTimestamp}:R> (<t:${endTimestamp}:f>)`,
