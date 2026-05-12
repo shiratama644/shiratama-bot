@@ -24,7 +24,7 @@ import { t } from '../i18n.js';
 
 export async function handleButton(client: Client, interaction: ButtonInteraction) {
   const settings = interaction.guildId ? await getGuildSettings(interaction.guildId) : null;
-  const language = settings?.language;
+  const language = settings?.language ?? 'en';
 
   if (interaction.customId.startsWith(BUTTON_COPY_PREFIX)) {
     const id = interaction.customId.slice(BUTTON_COPY_PREFIX.length);
