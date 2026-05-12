@@ -23,6 +23,7 @@ import {
     LANG_JA,
     MODAL_GIVEAWAY_SETTINGS
 } from '../ids.js';
+import { t } from '../i18n.js';
 
 export const gsettingsCommand: Command = {
     name: 'gsettings',
@@ -31,25 +32,26 @@ export const gsettingsCommand: Command = {
         await assertCanManageGiveaways(interaction);
         if (!interaction.guildId) return;
         const settings = await getGuildSettings(interaction.guildId);
+        const language = settings.language;
 
         await interaction.showModal(
             new ModalBuilder()
-                .setTitle("Giveaway Settings")
+                .setTitle(t(language, 'giveawaySettingsTitle'))
                 .setCustomId(MODAL_GIVEAWAY_SETTINGS)
                 .addLabelComponents(
                     new LabelBuilder()
-                        .setLabel("Language")
+                        .setLabel(t(language, 'language'))
                         .setStringSelectMenuComponent(
                             new StringSelectMenuBuilder()
                                 .setCustomId(FIELD_SETTINGS_LANGUAGE)
                                 .addOptions(
                                     new StringSelectMenuOptionBuilder()
-                                        .setLabel("English")
+                                        .setLabel(t(language, 'english'))
                                         .setValue(LANG_EN)
                                         .setEmoji("🇺🇸")
                                         .setDefault(settings.language !== LANG_JA),
                                     new StringSelectMenuOptionBuilder()
-                                        .setLabel("Japanese")
+                                        .setLabel(t(language, 'japanese'))
                                         .setValue(LANG_JA)
                                         .setEmoji("🇯🇵")
                                         .setDefault(settings.language === LANG_JA)
@@ -58,7 +60,7 @@ export const gsettingsCommand: Command = {
                 )
                 .addLabelComponents(
                     new LabelBuilder()
-                        .setLabel("Who Can Create a Giveaway")
+                        .setLabel(t(language, 'whoCanCreateGiveaway'))
                         .setRoleSelectMenuComponent(
                             new RoleSelectMenuBuilder()
                                 .setCustomId(FIELD_SETTINGS_WHO)
@@ -69,7 +71,7 @@ export const gsettingsCommand: Command = {
                 )
                 .addLabelComponents(
                     new LabelBuilder()
-                        .setLabel("Where Can We Create a Giveaway?")
+                        .setLabel(t(language, 'whereCanCreateGiveaway'))
                         .setChannelSelectMenuComponent(
                             new ChannelSelectMenuBuilder()
                                 .setCustomId(FIELD_SETTINGS_WHERE)
@@ -81,12 +83,12 @@ export const gsettingsCommand: Command = {
                 )
                 .addLabelComponents(
                     new LabelBuilder()
-                        .setLabel("Default Claim Deadline")
+                        .setLabel(t(language, 'defaultClaimDeadline'))
                         .setTextInputComponent(
                             new TextInputBuilder()
                                 .setCustomId(FIELD_SETTINGS_DEFCLAIM)
                                 .setStyle(TextInputStyle.Short)
-                                .setPlaceholder("10m, 1h, 3d, 1w")
+                                .setPlaceholder(t(language, 'defaultClaimDeadlinePlaceholder'))
                                 .setRequired(false)
                                 .setValue(settings.defaultClaimDeadline ?? '')
                         )

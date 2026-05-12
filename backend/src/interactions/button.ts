@@ -11,7 +11,7 @@ import {
   ensureGiveawayIsActive,
   refreshGiveawayMessage
 } from '../giveaway/index.js';
-import { isUserEntered, addGiveawayEntry, removeGiveawayEntry } from '../db/index.js';
+import { getGuildSettings, isUserEntered, addGiveawayEntry, removeGiveawayEntry } from '../db/index.js';
 import {
   BUTTON_CLAIM_PREFIX,
   BUTTON_COPY_PREFIX,
@@ -20,12 +20,16 @@ import {
   buttonLeaveId
 } from '../ids.js';
 import { logger } from '../utils/logger.js';
+import { t } from '../i18n.js';
 
 export async function handleButton(client: Client, interaction: ButtonInteraction) {
+  const settings = interaction.guildId ? await getGuildSettings(interaction.guildId) : null;
+  const language = settings?.language;
+
   if (interaction.customId.startsWith(BUTTON_COPY_PREFIX)) {
     const id = interaction.customId.slice(BUTTON_COPY_PREFIX.length);
     await interaction.reply({
-      content: `📋 **Giveaway ID:** \`${id}\``,
+      content: t(language, 'giveawayId', { id }),
       ephemeral: true
     });
     return;
@@ -33,7 +37,7 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
 
   if (interaction.customId.startsWith(BUTTON_CLAIM_PREFIX)) {
     await interaction.reply({
-      content: '🎫 Your claim request has been received. Staff will create a private channel for you shortly.',
+      content: t(language, 'claimRequestReceived'),
       ephemeral: true
     });
     return;
@@ -50,12 +54,12 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
     if (entered) {
       const leaveEmbed = new EmbedBuilder()
         .setColor(Colors.Yellow)
-        .setTitle('🎫 Already Entered!')
-        .setDescription('You have already entered this giveaway.');
+        .setTitle(t(language, 'alreadyEnteredTitle'))
+        .setDescription(t(language, 'alreadyEnteredDescription'));
       const leaveRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(buttonLeaveId(giveawayId))
-          .setLabel('Leave Giveaway')
+          .setLabel(t(language, 'leaveGiveaway'))
           .setStyle(ButtonStyle.Danger)
       );
       await interaction.reply({
@@ -68,8 +72,8 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
       await refreshGiveawayMessage(client, giveawayId);
       const embed = new EmbedBuilder()
         .setColor(Colors.Green)
-        .setTitle('✅ Entered!')
-        .setDescription('You have entered the giveaway. Good luck!');
+        .setTitle(t(language, 'enteredTitle'))
+        .setDescription(t(language, 'enteredDescription'));
       await interaction.reply({ embeds: [embed], ephemeral: true });
     }
     return;
@@ -85,8 +89,8 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
     await refreshGiveawayMessage(client, giveawayId);
     const leftEmbed = new EmbedBuilder()
       .setColor(Colors.Red)
-      .setTitle('❌ Left Giveaway')
-      .setDescription('You have left the giveaway.');
+      .setTitle(t(language, 'leftGiveawayTitle'))
+      .setDescription(t(language, 'leftGiveawayDescription'));
     await interaction.reply({
       embeds: [leftEmbed],
       ephemeral: true

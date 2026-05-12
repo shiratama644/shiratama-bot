@@ -1,8 +1,9 @@
 import { ChatInputCommandInteraction, Client, AutocompleteInteraction } from 'discord.js';
 import { Command } from './index.js';
 import { ensureGiveawayInGuild, rerollGiveaway } from '../giveaway/index.js';
-import { getEndedGiveaways } from '../db/index.js';
+import { getEndedGiveaways, getGuildSettings } from '../db/index.js';
 import { assertCanManageGiveaways } from './permissions.js';
+import { t } from '../i18n.js';
 
 export const grerollCommand: Command = {
   name: 'greroll',
@@ -24,7 +25,8 @@ export const grerollCommand: Command = {
     const id = interaction.options.getString('id', true);
     await ensureGiveawayInGuild(id, interaction.guildId);
     await rerollGiveaway(client, id);
-    await interaction.reply({ content: `Giveaway (${id}) has been rerolled.`, ephemeral: true });
+    const settings = await getGuildSettings(interaction.guildId);
+    await interaction.reply({ content: t(settings.language, 'giveawayRerolled', { id }), ephemeral: true });
   },
   autocomplete: async (interaction: AutocompleteInteraction) => {
     if (!interaction.guildId) return;

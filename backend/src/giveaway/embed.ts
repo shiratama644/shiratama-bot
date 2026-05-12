@@ -7,6 +7,7 @@ import {
 } from 'discord.js';
 import { buttonCopyId, buttonToggleId } from '../ids.js';
 import type { GiveawayStatus } from '../types.js';
+import { t } from '../i18n.js';
 
 export function parseDurationSeconds(duration: string): number {
   const match = duration.trim().match(/^(\d+)(m|h|d)$/i);
@@ -19,25 +20,25 @@ export function parseDurationSeconds(duration: string): number {
   return 0;
 }
 
-export function giveawayButtons(giveawayId: string, disabled = false): ActionRowBuilder<ButtonBuilder> {
+export function giveawayButtons(giveawayId: string, disabled = false, language = 'en'): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(buttonToggleId(giveawayId))
       .setEmoji('🎉')
-      .setLabel('Enter')
+      .setLabel(t(language, 'enterButton'))
       .setStyle(ButtonStyle.Primary)
       .setDisabled(disabled),
     new ButtonBuilder()
       .setCustomId(buttonCopyId(giveawayId))
-      .setLabel('Copy ID')
+      .setLabel(t(language, 'copyIdButton'))
       .setEmoji('📋')
       .setStyle(ButtonStyle.Secondary)
   );
 }
 
 /** @deprecated Use giveawayButtons instead */
-export function giveawayButton(giveawayId: string, disabled = false): ActionRowBuilder<ButtonBuilder> {
-  return giveawayButtons(giveawayId, disabled);
+export function giveawayButton(giveawayId: string, disabled = false, language = 'en'): ActionRowBuilder<ButtonBuilder> {
+  return giveawayButtons(giveawayId, disabled, language);
 }
 
 export function giveawayEmbed(params: {
@@ -53,21 +54,23 @@ export function giveawayEmbed(params: {
   interval?: string | null;
   autoRepeat?: boolean;
   claimDeadline?: string | null;
+  language?: string;
 }): EmbedBuilder {
   const isEnded = params.status !== 'active';
   const color = params.status === 'active' ? Colors.Green : Colors.Red;
   const endTimestamp = Math.floor(params.endAt.getTime() / 1000);
   const winners = params.winners ?? [];
+  const language = params.language ?? 'en';
 
   const descLines: string[] = [
-    `⏱️ **${isEnded ? 'Ended' : 'Ends'}:** <t:${endTimestamp}:R> (<t:${endTimestamp}:f>)`,
-    `🎙️ **Host:** <@${params.createdBy}>`,
-    `🎟️ **Entries:** ${params.entries}`,
-    `👑 **Winners:** ${!isEnded
+    `⏱️ **${isEnded ? t(language, 'ended') : t(language, 'ends')}:** <t:${endTimestamp}:R> (<t:${endTimestamp}:f>)`,
+    `🎙️ **${t(language, 'host')}:** <@${params.createdBy}>`,
+    `🎟️ **${t(language, 'entries')}:** ${params.entries}`,
+    `👑 **${t(language, 'winners')}:** ${!isEnded
       ? String(params.winnerCount)
       : (winners.length > 0
           ? winners.map(id => `<@${id}>`).join(', ')
-          : 'No winners')
+          : t(language, 'noWinners'))
     }`
   ];
 
@@ -78,14 +81,14 @@ export function giveawayEmbed(params: {
     if (isEnded) {
       const claimDeadlineSecs = parseDurationSeconds(effectiveClaimDeadline);
       const claimDeadlineTs = endTimestamp + claimDeadlineSecs;
-      descLines.push(`⏰ **Claim Deadline:** <t:${claimDeadlineTs}:R> (<t:${claimDeadlineTs}:f>)`);
+      descLines.push(`⏰ **${t(language, 'claimDeadline')}:** <t:${claimDeadlineTs}:R> (<t:${claimDeadlineTs}:f>)`);
     } else {
-      descLines.push(`⏰ **Claim Window:** \`${effectiveClaimDeadline}\` after end`);
+      descLines.push(`⏰ **${t(language, 'claimWindow')}:** \`${effectiveClaimDeadline}\` ${t(language, 'afterEnd')}`);
     }
   }
 
   if (params.autoRepeat && params.interval) {
-    descLines.push(`🔄 **Repeats:** Every \`${params.interval}\``);
+    descLines.push(`🔄 **${t(language, 'repeats')}:** ${t(language, 'every')} \`${params.interval}\``);
   }
 
   if (params.description) {
@@ -96,7 +99,6 @@ export function giveawayEmbed(params: {
     .setColor(color)
     .setAuthor({ name: params.title })
     .setDescription(descLines.join('\n'))
-    .setFooter({ text: isEnded ? 'Ended' : 'Click 🎉 Enter to participate' })
+    .setFooter({ text: isEnded ? t(language, 'ended') : t(language, 'clickEnterToParticipate') })
     .setTimestamp(params.endAt);
 }
-

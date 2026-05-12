@@ -18,6 +18,7 @@ import {
 } from '../ids.js';
 import { logger } from '../utils/logger.js';
 import { AppError } from '../errors.js';
+import { t } from '../i18n.js';
 
 export async function handleModalSubmit(client: Client, interaction: ModalSubmitInteraction) {
   if (interaction.customId === MODAL_GIVEAWAY_CREATE) {
@@ -30,10 +31,11 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     const winnerCount = Number.parseInt(winnerCountRaw || '1', 10);
 
     if (!interaction.guildId || !interaction.channelId) {
-      throw new AppError('Please run this command in a text channel within a server.', 400);
+      throw new AppError(t('en', 'pleaseRunInTextChannelInServer'), 400);
     }
 
     const settings = await getGuildSettings(interaction.guildId);
+    const language = settings.language;
     const claimDeadline = settings.defaultClaimDeadline ?? null;
 
     logger.info(`Creating giveaway: ${title} in guild ${interaction.guildId}`);
@@ -52,14 +54,17 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     });
 
     await interaction.reply({
-      content: `Giveaway created: ${created.title}${autoRep ? ` (auto-repeat interval: ${duration})` : ''}`,
+      content: t(language, 'giveawayCreated', {
+        title: created.title,
+        autoRepeatSuffix: autoRep ? t(language, 'autoRepeatSuffix', { duration }) : ''
+      }),
       ephemeral: true
     });
     return;
   }
 
   if (interaction.customId === MODAL_GIVEAWAY_SETTINGS) {
-    if (!interaction.guildId) throw new AppError('Guild not found.', 404);
+    if (!interaction.guildId) throw new AppError(t('en', 'guildNotFound'), 404);
 
     const languageValues = interaction.fields.getStringSelectValues(FIELD_SETTINGS_LANGUAGE);
     const language = languageValues[0] ?? LANG_EN;
@@ -83,7 +88,7 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     });
 
     await interaction.reply({
-      content: 'Settings saved.',
+      content: t(language, 'settingsSaved'),
       ephemeral: true
     });
     return;

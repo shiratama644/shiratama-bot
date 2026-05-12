@@ -1,6 +1,7 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { getManagerRoleIds } from '../db/index.js';
+import { getGuildSettings, getManagerRoleIds } from '../db/index.js';
 import { AppError } from '../errors.js';
+import { t } from '../i18n.js';
 
 export function hasAnyRequiredRole(memberRoleIds: ReadonlySet<string>, requiredRoleIds: readonly string[]): boolean {
   return requiredRoleIds.some((roleId) => memberRoleIds.has(roleId));
@@ -8,9 +9,11 @@ export function hasAnyRequiredRole(memberRoleIds: ReadonlySet<string>, requiredR
 
 export async function assertCanManageGiveaways(interaction: ChatInputCommandInteraction): Promise<void> {
   if (!interaction.guildId) {
-    throw new AppError('Please run this command in a server.', 400);
+    throw new AppError(t('en', 'pleaseRunInServer'), 400);
   }
 
+  const settings = await getGuildSettings(interaction.guildId);
+  const language = settings.language;
   const managerRoleIds = await getManagerRoleIds(interaction.guildId);
   if (managerRoleIds.length === 0) {
     return;
@@ -18,11 +21,11 @@ export async function assertCanManageGiveaways(interaction: ChatInputCommandInte
 
   const memberRoles = interaction.member?.roles;
   if (!memberRoles || Array.isArray(memberRoles)) {
-    throw new AppError('Could not retrieve role information.', 403);
+    throw new AppError(t(language, 'couldNotRetrieveRoleInfo'), 403);
   }
 
   const hasRole = hasAnyRequiredRole(new Set(memberRoles.cache.keys()), managerRoleIds);
   if (!hasRole) {
-    throw new AppError('You do not have permission to manage giveaways.', 403);
+    throw new AppError(t(language, 'noPermissionManageGiveaways'), 403);
   }
 }
