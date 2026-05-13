@@ -31,12 +31,18 @@
 
 /* ───── Layout ───── */
 .container {
-  max-width: 920px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 32px 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 h1 {
@@ -46,6 +52,48 @@ h1 {
   color: var(--dc-header-primary);
   letter-spacing: -0.02em;
   text-shadow: 0 2px 12px rgba(88, 101, 242, 0.4);
+}
+
+.hamburger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  font-size: 1.1rem;
+}
+
+.layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.sidebar {
+  width: 210px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar button {
+  width: 100%;
+  text-align: left;
+}
+
+.sidebar button.active {
+  background: var(--dc-green);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
 }
 
 h2 {
@@ -94,7 +142,8 @@ label {
 }
 
 /* ───── Inputs ───── */
-input {
+input,
+select {
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 10px 12px;
@@ -112,15 +161,21 @@ input::placeholder {
   color: var(--dc-text-muted);
 }
 
-input:hover {
+input:hover,
+select:hover {
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(30, 31, 34, 0.9);
 }
 
-input:focus {
+input:focus,
+select:focus {
   border-color: var(--dc-blurple);
   box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.25);
   background: rgba(20, 21, 24, 0.9);
+}
+
+select[multiple] {
+  min-height: 120px;
 }
 
 /* ───── Buttons ───── */
@@ -241,4 +296,19 @@ button.danger:hover {
   border-color: var(--dc-blurple);
   box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.25);
   background: rgba(20, 21, 24, 0.9);
+}
+
+@media (max-width: 840px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    display: none;
+    width: 100%;
+  }
+
+  .sidebar.open {
+    display: flex;
+  }
 }
