@@ -1,7 +1,6 @@
 import { LANG_EN, LANG_JA } from './ids.js';
 
-const messages = {
-  en: {
+const enMessages = {
     giveawayCreateTitle: 'Giveaway Create',
     giveawaySettingsTitle: 'Giveaway Settings',
     language: 'Language',
@@ -28,7 +27,7 @@ const messages = {
     giveawayRerolled: 'Giveaway ({id}) has been rerolled.',
     giveawayAutoRepeatResumed: 'Giveaway ({id}) auto-repeat has been resumed.',
     giveawayAutoRepeatStopped: 'Giveaway ({id}) auto-repeat has been stopped.',
-    giveawayId: '📋 **Giveaway ID:** `{id}`',
+    giveawayId: 'Giveaway ID',
     claimRequestReceived: '🎫 Your claim request has been received. Staff will create a private channel for you shortly.',
     alreadyEnteredTitle: '🎫 Already Entered!',
     alreadyEnteredDescription: 'You have already entered this giveaway.',
@@ -67,7 +66,7 @@ const messages = {
     giveawayMessageNotFound: 'Giveaway message not found.',
     noParticipantsNoWinners: 'No participants entered, so no winners were selected.',
     congratulationsWinners: 'Congratulations {winners}!',
-    wonGiveaway: 'You won the **{title}** giveaway!',
+    wonGiveaway: 'You won the giveaway: {title}!',
     claimYourPrizeAuthor: 'Claim Your Prize',
     claimYourPrizeTitle: '🎫 Claim Your Prize',
     claimBy: 'Claim by',
@@ -77,24 +76,27 @@ const messages = {
     newWinners: 'New winner(s): {winners}!',
     prizeLabel: 'Prize',
     claimDeadlineLabel: 'Claim deadline'
-  },
-  ja: {
-    giveawayCreateTitle: '抽選作成',
+} as const satisfies Record<string, string>;
+
+type I18nMessageMap = Record<keyof typeof enMessages, string>;
+
+const jaMessages: I18nMessageMap = {
+    giveawayCreateTitle: '抽選を作成',
     giveawaySettingsTitle: '抽選設定',
     language: '言語',
     english: '英語',
     japanese: '日本語',
-    whoCanCreateGiveaway: '抽選を作成できるロール',
+    whoCanCreateGiveaway: '抽選作成権限のあるロール',
     whereCanCreateGiveaway: '抽選を作成できるチャンネル',
-    defaultClaimDeadline: '受取期限のデフォルト',
+    defaultClaimDeadline: 'デフォルトの受取期限',
     defaultClaimDeadlinePlaceholder: '10m, 1h, 3d, 1w',
     prize: '賞品',
     prizePlaceholder: '10M など',
     autoRepeating: '自動繰り返し',
     disable: '無効',
     enable: '有効',
-    durationInterval: '期間（間隔）',
-    durationIntervalDescription: '自動繰り返しを有効にする場合は、ここに間隔を入力してください。',
+    durationInterval: '繰り返し間隔',
+    durationIntervalDescription: '自動繰り返しを有効にする場合、間隔を指定してください。',
     durationIntervalPlaceholder: '>= 1m, 1h, 1d10m など',
     numberOfWinners: '当選者数',
     description: '説明',
@@ -105,11 +107,11 @@ const messages = {
     giveawayRerolled: '抽選（{id}）を再抽選しました。',
     giveawayAutoRepeatResumed: '抽選（{id}）の自動繰り返しを再開しました。',
     giveawayAutoRepeatStopped: '抽選（{id}）の自動繰り返しを停止しました。',
-    giveawayId: '📋 **抽選ID:** `{id}`',
-    claimRequestReceived: '🎫 受け取り申請を受け付けました。まもなくスタッフがあなた専用チャンネルを作成します。',
+    giveawayId: '抽選ID',
+    claimRequestReceived: '🎫 受け取り申請を受け付けました。スタッフがまもなく専用チャンネルを準備します。',
     alreadyEnteredTitle: '🎫 すでに参加しています',
     alreadyEnteredDescription: 'この抽選にはすでに参加済みです。',
-    leaveGiveaway: '抽選から離脱',
+    leaveGiveaway: '参加を取り消す',
     enteredTitle: '✅ 参加しました',
     enteredDescription: '抽選に参加しました。幸運を祈ります！',
     leftGiveawayTitle: '❌ 抽選から離脱しました',
@@ -144,7 +146,7 @@ const messages = {
     giveawayMessageNotFound: '抽選メッセージが見つかりません。',
     noParticipantsNoWinners: '参加者がいなかったため、当選者は選ばれませんでした。',
     congratulationsWinners: 'おめでとうございます {winners} さん！',
-    wonGiveaway: '**{title}** の抽選に当選しました！',
+    wonGiveaway: '抽選 {title} に当選しました！',
     claimYourPrizeAuthor: '賞品の受け取り',
     claimYourPrizeTitle: '🎫 賞品を受け取る',
     claimBy: '受取期限',
@@ -154,11 +156,15 @@ const messages = {
     newWinners: '新しい当選者: {winners} さん！',
     prizeLabel: '賞品',
     claimDeadlineLabel: '受取期限'
-  }
-} as const;
+  };
+
+const messages = {
+  [LANG_EN]: enMessages,
+  [LANG_JA]: jaMessages
+} as const satisfies Record<(typeof LANG_EN) | (typeof LANG_JA), I18nMessageMap>;
 
 export type BotLanguage = keyof typeof messages;
-export type I18nKey = keyof typeof messages.en;
+export type I18nKey = keyof typeof enMessages;
 export const DEFAULT_LANGUAGE: BotLanguage = LANG_EN;
 
 export function normalizeLanguage(language?: string | null): BotLanguage {
@@ -166,8 +172,9 @@ export function normalizeLanguage(language?: string | null): BotLanguage {
 }
 
 export function t(language: string | null | undefined, key: I18nKey, vars?: Record<string, string | number>): string {
-  const dict = messages[normalizeLanguage(language)];
-  const template = String(dict[key]);
+  const dict = messages[normalizeLanguage(language)] as Record<string, string>;
+  const fallback = messages[DEFAULT_LANGUAGE] as Record<string, string>;
+  const template = dict[key] ?? fallback[key] ?? key;
   if (!vars) return template;
   let text = template;
   for (const [name, value] of Object.entries(vars)) {

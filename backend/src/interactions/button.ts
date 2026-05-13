@@ -29,7 +29,7 @@ export async function handleButton(client: Client, interaction: ButtonInteractio
   if (interaction.customId.startsWith(BUTTON_COPY_PREFIX)) {
     const id = interaction.customId.slice(BUTTON_COPY_PREFIX.length);
     await interaction.reply({
-      content: t(language, 'giveawayId', { id }),
+      content: `📋 **${t(language, 'giveawayId')}:** \`${id}\``,
       ephemeral: true
     });
     return;

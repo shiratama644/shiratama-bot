@@ -235,7 +235,7 @@ export async function endGiveaway(client: Client, giveawayId: string, manualEnd 
   } else {
     const endContent = [
       t(language, 'congratulationsWinners', { winners: formatWinnerMentions(winners) }),
-      t(language, 'wonGiveaway', { title: giveaway.title })
+      t(language, 'wonGiveaway', { title: `**${giveaway.title}**` })
     ].join('\n');
 
     if (claimDeadlineTs) {
