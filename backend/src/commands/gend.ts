@@ -1,9 +1,10 @@
 import { ChatInputCommandInteraction, Client, AutocompleteInteraction } from 'discord.js';
 import { Command } from './index.js';
 import { endGiveaway } from '../giveaway/index.js';
-import { getActiveGiveaways } from '../db/index.js';
+import { getActiveGiveaways, getGuildSettings } from '../db/index.js';
 import { assertCanManageGiveaways } from './permissions.js';
 import { ensureGiveawayInGuild } from '../giveaway/index.js';
+import { t } from '../i18n.js';
 
 export const gendCommand: Command = {
   name: 'gend',
@@ -25,7 +26,8 @@ export const gendCommand: Command = {
     const id = interaction.options.getString('id', true);
     await ensureGiveawayInGuild(id, interaction.guildId);
     await endGiveaway(client, id, true);
-    await interaction.reply({ content: `Giveaway (${id}) has been ended.`, ephemeral: true });
+    const settings = await getGuildSettings(interaction.guildId);
+    await interaction.reply({ content: t(settings.language, 'giveawayEnded', { id }), ephemeral: true });
   },
   autocomplete: async (interaction: AutocompleteInteraction) => {
     if (!interaction.guildId) return;
