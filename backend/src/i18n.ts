@@ -79,6 +79,10 @@ const enMessages = {
     claimDeadlineLabel: 'Claim deadline'
 } as const satisfies Record<string, string>;
 
+type I18nMessageMap = {
+  [K in keyof typeof enMessages]: string;
+};
+
 const jaMessages = {
     giveawayCreateTitle: '抽選を作成',
     giveawaySettingsTitle: '抽選設定',
@@ -155,12 +159,12 @@ const jaMessages = {
     newWinners: '新しい当選者: {winners} さん！',
     prizeLabel: '賞品',
     claimDeadlineLabel: '受取期限'
-  } as const satisfies Record<string, string>;
+  } as const satisfies I18nMessageMap;
 
 const _allMessages = {
   [LANG_EN]: enMessages,
   [LANG_JA]: jaMessages,
-} as const;
+} as const satisfies Record<(typeof LANG_EN) | (typeof LANG_JA), I18nMessageMap>;
 
 export type BotLanguage = keyof typeof _allMessages;
 
