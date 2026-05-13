@@ -34,6 +34,15 @@ const defaultSettings: GuildSettings = {
   defaultClaimDeadline: null
 };
 
+const isOptionItem = (item: unknown): item is OptionItem =>
+  !!item &&
+  typeof item === 'object' &&
+  typeof (item as { id?: unknown }).id === 'string' &&
+  typeof (item as { name?: unknown }).name === 'string';
+
+const toOptionItems = (value: unknown): OptionItem[] =>
+  Array.isArray(value) ? value.filter(isOptionItem) : [];
+
 function App() {
   const [guildId, setGuildId] = useState(import.meta.env.VITE_GUILD_ID ?? '');
   const [channelId, setChannelId] = useState('');
@@ -50,9 +59,10 @@ function App() {
   const [activeView, setActiveView] = useState<ViewKey>('connection');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [message, setMessage] = useState('');
+  const uiLanguage = settings.language === 'ja' ? 'ja' : 'en';
 
   const handleErrorMessage = (error: unknown) => {
-    setMessage(error instanceof Error ? error.message : 'エラー');
+    setMessage(error instanceof Error ? error.message : uiLanguage === 'ja' ? 'エラー' : 'Error');
   };
 
   const closeMenu = () => setIsMenuOpen(false);
@@ -97,20 +107,25 @@ function App() {
       throw new Error(optionsData.error ?? 'サーバー情報の取得に失敗しました。');
     }
 
-    const loadedSettings = settingsData.settings ?? defaultSettings;
-    const loadedChannels = optionsData.channels ?? [];
+    const settingsValue = settingsData.settings;
+    const loadedSettings =
+      settingsValue && typeof settingsValue === 'object'
+        ? (settingsValue as Partial<GuildSettings>)
+        : defaultSettings;
+    const loadedChannels = toOptionItems(optionsData.channels);
+    const loadedRoles = toOptionItems(optionsData.roles);
     setSettings({
       language: loadedSettings.language === 'ja' ? 'ja' : 'en',
       managerRoleIds: loadedSettings.managerRoleIds ?? [],
       giveawayChannelIds: loadedSettings.giveawayChannelIds ?? [],
       defaultClaimDeadline: loadedSettings.defaultClaimDeadline ?? null
     });
-    setRoleOptions(optionsData.roles ?? []);
+    setRoleOptions(loadedRoles);
     setChannelOptions(loadedChannels);
     if (!channelId && loadedChannels.length > 0) {
       const preferredChannelId =
-        loadedSettings.giveawayChannelIds?.find((id: string) =>
-          loadedChannels.some((channel: OptionItem) => channel.id === id)
+        loadedSettings.giveawayChannelIds?.find((id) =>
+          loadedChannels.some((channel) => channel.id === id)
         ) ?? loadedChannels[0].id;
       setChannelId(preferredChannelId);
     }

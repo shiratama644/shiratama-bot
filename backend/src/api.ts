@@ -29,16 +29,13 @@ const settingsSchema = z.object({
   language: z.enum(['en', 'ja']).optional(),
   managerRoleIds: z.array(z.string().min(1)).optional(),
   giveawayChannelIds: z.array(z.string().min(1)).optional(),
-  defaultClaimDeadline: z
-    .string()
-    .optional()
-    .transform((value) => {
-      if (!value) {
-        return null;
-      }
-      const trimmed = value.trim();
-      return trimmed.length > 0 ? trimmed : null;
-    })
+  defaultClaimDeadline: z.preprocess((value) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }, z.string().nullable().optional())
 });
 
 function requireAdminToken(req: Request): void {
@@ -140,7 +137,8 @@ export function createApiServer(client: Client) {
       language: body.language ?? current.language,
       managerRoleIds: body.managerRoleIds ?? current.managerRoleIds,
       giveawayChannelIds: body.giveawayChannelIds ?? current.giveawayChannelIds,
-      defaultClaimDeadline: body.defaultClaimDeadline ?? current.defaultClaimDeadline
+      defaultClaimDeadline:
+        body.defaultClaimDeadline !== undefined ? body.defaultClaimDeadline : current.defaultClaimDeadline
     });
     res.json({ ok: true });
   }));
@@ -157,7 +155,7 @@ export function createApiServer(client: Client) {
     const roles = roleCollection
       .map((role) => ({ id: role.id, name: role.name }))
       .filter((role) => role.id !== guild.id)
-      .sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     const channelCollection = await guild.channels.fetch();
     const channels = channelCollection
@@ -165,7 +163,7 @@ export function createApiServer(client: Client) {
       .filter((channel): channel is NonNullable<typeof channel> => channel !== null)
       .filter((channel) => channel.type === ChannelType.GuildText)
       .map((channel) => ({ id: channel.id, name: channel.name }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     res.json({ roles, channels });
   }));
