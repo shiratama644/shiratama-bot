@@ -1,3 +1,4 @@
+import { logger } from './utils/logger.js';
 import { LANG_EN, LANG_JA } from './ids.js';
 
 const enMessages = {
@@ -78,9 +79,7 @@ const enMessages = {
     claimDeadlineLabel: 'Claim deadline'
 } as const satisfies Record<string, string>;
 
-type I18nMessageMap = Record<keyof typeof enMessages, string>;
-
-const jaMessages: I18nMessageMap = {
+const jaMessages = {
     giveawayCreateTitle: '抽選を作成',
     giveawaySettingsTitle: '抽選設定',
     language: '言語',
@@ -156,29 +155,149 @@ const jaMessages: I18nMessageMap = {
     newWinners: '新しい当選者: {winners} さん！',
     prizeLabel: '賞品',
     claimDeadlineLabel: '受取期限'
-  };
+  } as const satisfies Record<string, string>;
 
-const messages = {
+const _allMessages = {
   [LANG_EN]: enMessages,
-  [LANG_JA]: jaMessages
-} as const satisfies Record<(typeof LANG_EN) | (typeof LANG_JA), I18nMessageMap>;
+  [LANG_JA]: jaMessages,
+} as const;
 
-export type BotLanguage = keyof typeof messages;
-export type I18nKey = keyof typeof enMessages;
+export type BotLanguage = keyof typeof _allMessages;
+
 export const DEFAULT_LANGUAGE: BotLanguage = LANG_EN;
 
-export function normalizeLanguage(language?: string | null): BotLanguage {
-  return language === LANG_JA ? LANG_JA : DEFAULT_LANGUAGE;
+export type I18nKey = {
+  [L in BotLanguage]: keyof (typeof _allMessages)[L];
+}[BotLanguage];
+
+type TemplateForKey<K extends I18nKey> = {
+  [L in BotLanguage]:
+    K extends keyof (typeof _allMessages)[L]
+      ? (typeof _allMessages)[L][K]
+      : never;
+}[BotLanguage];
+
+type Primitive =
+  | string
+  | number
+  | boolean
+  | bigint
+  | Date;
+
+type Trim<S extends string> =
+  S extends ` ${infer T}`
+    ? Trim<T>
+    : S extends `${infer T} `
+      ? Trim<T>
+      : S;
+
+type ExtractVars<S extends string> =
+  S extends `${string}{${infer Name}}${infer Rest}`
+    ? Trim<Name> | ExtractVars<Rest>
+    : never;
+
+type VarsFor<K extends I18nKey> =
+  ExtractVars<TemplateForKey<K>> extends never
+    ? never
+    : {
+        [P in ExtractVars<TemplateForKey<K>>]: Primitive;
+      };
+
+type ArgsFor<K extends I18nKey> =
+  [VarsFor<K>] extends [never]
+    ? []
+    : [vars: VarsFor<K>];
+
+const messages: Record<
+  BotLanguage,
+  Partial<Record<I18nKey, string>>
+> = _allMessages;
+
+const VARIABLE_REGEX = /\{\s*([^}\s]+)\s*\}/g;
+
+const INTL_LOCALE_MAP: Record<BotLanguage, string> = {
+  [LANG_EN]: 'en-US',
+  [LANG_JA]: 'ja-JP',
+};
+
+const reportError = (message: string) => {
+  logger.warn(`[I18n] ${message}`);
+};
+
+export function isLanguage(
+  lang: string | null | undefined
+): lang is BotLanguage {
+  return !!lang && lang in messages;
 }
 
-export function t(language: string | null | undefined, key: I18nKey, vars?: Record<string, string | number>): string {
-  const dict = messages[normalizeLanguage(language)] as Record<string, string>;
-  const fallback = messages[DEFAULT_LANGUAGE] as Record<string, string>;
-  const template = dict[key] ?? fallback[key] ?? key;
-  if (!vars) return template;
-  let text = template;
-  for (const [name, value] of Object.entries(vars)) {
-    text = text.replaceAll(`{${name}}`, String(value));
+export function normalizeLanguage(
+  lang?: string | null
+): BotLanguage {
+  return isLanguage(lang)
+    ? lang
+    : DEFAULT_LANGUAGE;
+}
+
+export function t<K extends I18nKey>(
+  language: string | null | undefined,
+  key: K,
+  ...args: ArgsFor<K>
+): string {
+  const lang = normalizeLanguage(language);
+  const intlLocale = INTL_LOCALE_MAP[lang];
+
+  let template = messages[lang][key];
+
+  if (template == null) {
+    reportError(
+      `Missing key: "${key}" in language: "${lang}"`
+    );
+
+    template = messages[DEFAULT_LANGUAGE][key];
   }
-  return text;
+
+  if (template == null) {
+    return String(key);
+  }
+
+  const vars =
+    args[0] as
+      | Record<string, Primitive | undefined>
+      | undefined;
+
+  if (!vars) {
+    return template;
+  }
+
+  return template.replace(
+    VARIABLE_REGEX,
+    (match, name) => {
+      const value = vars[name];
+
+      if (value === undefined) {
+        reportError(
+          `Variable "${name}" is expected by template but not provided. Key: "${key}"`
+        );
+
+        return match;
+      }
+
+      if (value instanceof Date) {
+        return value.toLocaleString(intlLocale);
+      }
+
+      return String(value);
+    }
+  );
+}
+
+export function getFixedT(
+  language: string | null | undefined
+) {
+  const lang = normalizeLanguage(language);
+
+  return <K extends I18nKey>(
+    key: K,
+    ...args: ArgsFor<K>
+  ) => t(lang, key, ...args);
 }
