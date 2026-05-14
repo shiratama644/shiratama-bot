@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
+import { serve } from '@hono/node-server';
 import { buildClient } from './bot.js';
-import { createApiServer } from './api.js';
+import { createApiApp } from './api.js';
 import { initSchema } from './db/index.js';
 
 dotenv.config();
@@ -17,10 +18,13 @@ if (!token || !appId || !process.env.DATABASE_URL) {
 await initSchema();
 
 const client = buildClient(token, appId, guildId);
-const app = createApiServer(client);
+const app = createApiApp(client);
 
-app.listen(port, () => {
-  console.log(`[api] listening on ${port}`);
+serve({
+  fetch: app.fetch,
+  port
 });
+
+console.log(`[api] listening on ${port}`);
 
 await client.login(token);
