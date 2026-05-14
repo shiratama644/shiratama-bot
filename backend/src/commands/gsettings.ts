@@ -66,7 +66,7 @@ export const gsettingsCommand: Command = {
                                 .setCustomId(FIELD_SETTINGS_WHO)
                                 .setMinValues(1)
                                 .setMaxValues(25)
-                                .setDefaultRoles(settings.managerRoleIds)
+                                .setDefaultRoles(settings.giveawayCreatorRoleIds)
                         )
                 )
                 .addLabelComponents(

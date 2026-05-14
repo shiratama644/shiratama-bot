@@ -4,6 +4,8 @@ import type { Giveaway } from '../types.js';
 export interface GuildSettingsTable {
   guild_id: string;
   manager_role_ids: ColumnType<string[], string[] | undefined, string[]>;
+  giveaway_creator_role_ids: ColumnType<string[], string[] | undefined, string[]>;
+  dashboard_view_role_ids: ColumnType<string[], string[] | undefined, string[]>;
   language: ColumnType<string, string | undefined, string>;
   giveaway_channel_ids: ColumnType<string[], string[] | undefined, string[]>;
   default_claim_deadline: ColumnType<string | null, string | null | undefined, string | null>;

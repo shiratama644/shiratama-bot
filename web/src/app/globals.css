@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'react-datepicker/dist/react-datepicker.css';
 
 * {
   box-sizing: border-box;

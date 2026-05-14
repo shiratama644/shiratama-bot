@@ -1,5 +1,5 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { getGuildSettings, getManagerRoleIds } from '../db/index.js';
+import { getGiveawayCreatorRoleIds, getGuildSettings } from '../db/index.js';
 import { AppError } from '../errors.js';
 import { DEFAULT_LANGUAGE, t } from '../i18n.js';
 
@@ -14,8 +14,8 @@ export async function assertCanManageGiveaways(interaction: ChatInputCommandInte
 
   const settings = await getGuildSettings(interaction.guildId);
   const language = settings.language;
-  const managerRoleIds = await getManagerRoleIds(interaction.guildId);
-  if (managerRoleIds.length === 0) {
+  const giveawayCreatorRoleIds = await getGiveawayCreatorRoleIds(interaction.guildId);
+  if (giveawayCreatorRoleIds.length === 0) {
     return;
   }
 
@@ -24,7 +24,7 @@ export async function assertCanManageGiveaways(interaction: ChatInputCommandInte
     throw new AppError(t(language, 'couldNotRetrieveRoleInfo'), 403);
   }
 
-  const hasRole = hasAnyRequiredRole(new Set(memberRoles.cache.keys()), managerRoleIds);
+  const hasRole = hasAnyRequiredRole(new Set(memberRoles.cache.keys()), giveawayCreatorRoleIds);
   if (!hasRole) {
     throw new AppError(t(language, 'noPermissionManageGiveaways'), 403);
   }

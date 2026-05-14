@@ -1,27 +1,30 @@
 import type { GuildSettings } from '../types.js';
 import { getDb, runDb } from './client.js';
 
-export async function getManagerRoleIds(guildId: string): Promise<string[]> {
+export async function getGiveawayCreatorRoleIds(guildId: string): Promise<string[]> {
   const settings = await getGuildSettings(guildId);
-  return settings.managerRoleIds;
+  return settings.giveawayCreatorRoleIds;
 }
 
-export async function setManagerRoleIds(guildId: string, roleIds: string[]): Promise<void> {
+export async function setGiveawayCreatorRoleIds(guildId: string, roleIds: string[]): Promise<void> {
   await runDb(async () => {
     await getDb()
       .insertInto('guild_settings')
       .values({
         guild_id: guildId,
-        manager_role_ids: roleIds
+        giveaway_creator_role_ids: roleIds
       })
       .onConflict((oc) =>
         oc.column('guild_id').doUpdateSet({
-          manager_role_ids: roleIds
+          giveaway_creator_role_ids: roleIds
         })
       )
       .execute();
-  }, 'setManagerRoleIds');
+  }, 'setGiveawayCreatorRoleIds');
 }
+
+export const getManagerRoleIds = getGiveawayCreatorRoleIds;
+export const setManagerRoleIds = setGiveawayCreatorRoleIds;
 
 export async function getGuildSettings(guildId: string): Promise<GuildSettings> {
   return runDb(async () => {
@@ -33,7 +36,8 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
     if (!row) {
       return {
         guildId,
-        managerRoleIds: [],
+        giveawayCreatorRoleIds: [],
+        dashboardViewRoleIds: [],
         language: 'en',
         giveawayChannelIds: [],
         defaultClaimDeadline: null
@@ -41,7 +45,8 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
     }
     return {
       guildId: row.guild_id,
-      managerRoleIds: row.manager_role_ids ?? [],
+      giveawayCreatorRoleIds: row.giveaway_creator_role_ids ?? row.manager_role_ids ?? [],
+      dashboardViewRoleIds: row.dashboard_view_role_ids ?? [],
       language: row.language ?? 'en',
       giveawayChannelIds: row.giveaway_channel_ids ?? [],
       defaultClaimDeadline: row.default_claim_deadline
@@ -51,7 +56,8 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
 
 export async function setGuildSettings(guildId: string, settings: Partial<Omit<GuildSettings, 'guildId'>>): Promise<void> {
   await runDb(async () => {
-    const managerRoleIds = settings.managerRoleIds ?? [];
+    const giveawayCreatorRoleIds = settings.giveawayCreatorRoleIds ?? [];
+    const dashboardViewRoleIds = settings.dashboardViewRoleIds ?? [];
     const language = settings.language ?? 'en';
     const giveawayChannelIds = settings.giveawayChannelIds ?? [];
     const defaultClaimDeadline = settings.defaultClaimDeadline ?? null;
@@ -59,14 +65,16 @@ export async function setGuildSettings(guildId: string, settings: Partial<Omit<G
       .insertInto('guild_settings')
       .values({
         guild_id: guildId,
-        manager_role_ids: managerRoleIds,
+        giveaway_creator_role_ids: giveawayCreatorRoleIds,
+        dashboard_view_role_ids: dashboardViewRoleIds,
         language,
         giveaway_channel_ids: giveawayChannelIds,
         default_claim_deadline: defaultClaimDeadline
       })
       .onConflict((oc) =>
         oc.column('guild_id').doUpdateSet({
-          manager_role_ids: managerRoleIds,
+          giveaway_creator_role_ids: giveawayCreatorRoleIds,
+          dashboard_view_role_ids: dashboardViewRoleIds,
           language,
           giveaway_channel_ids: giveawayChannelIds,
           default_claim_deadline: defaultClaimDeadline

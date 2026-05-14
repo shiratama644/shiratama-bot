@@ -73,7 +73,7 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     const language = languageValues[0] ?? LANG_EN;
 
     const rolesCollection = interaction.fields.getSelectedRoles(FIELD_SETTINGS_WHO);
-    const managerRoleIds = rolesCollection ? [...rolesCollection.keys()] : [];
+    const giveawayCreatorRoleIds = rolesCollection ? [...rolesCollection.keys()] : [];
 
     const channelsCollection = interaction.fields.getSelectedChannels(FIELD_SETTINGS_WHERE);
     const giveawayChannelIds = channelsCollection ? [...channelsCollection.keys()] : [];
@@ -81,10 +81,10 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     const defclaimRaw = interaction.fields.getTextInputValue(FIELD_SETTINGS_DEFCLAIM);
     const defaultClaimDeadline = defclaimRaw.trim() || null;
 
-    logger.info(`Updating settings for guild ${interaction.guildId}: roles=${managerRoleIds.join(',')}, channels=${giveawayChannelIds.join(',')}`);
+    logger.info(`Updating settings for guild ${interaction.guildId}: roles=${giveawayCreatorRoleIds.join(',')}, channels=${giveawayChannelIds.join(',')}`);
 
     await setGuildSettings(interaction.guildId, {
-      managerRoleIds,
+      giveawayCreatorRoleIds,
       language,
       giveawayChannelIds,
       defaultClaimDeadline
