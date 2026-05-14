@@ -3,10 +3,12 @@ import {
   getGiveaway,
   getActiveGiveaways,
   getManagerRoleIds,
+  getGuildSettings,
+  setGuildSettings,
   setManagerRoleIds
 } from './db/index.js';
 import { createGiveawayPost, endGiveaway, rerollGiveaway } from './giveaway/index.js';
-import type { Client } from 'discord.js';
+import { ChannelType, type Client } from 'discord.js';
 import { z } from 'zod';
 import { AppError, getErrorMessage, getErrorStatusCode } from './errors.js';
 
@@ -23,6 +25,18 @@ const createSchema = z.object({
   winnerCount: z.number().int().min(1)
 });
 const guildBodySchema = z.object({ guildId: z.string().min(1) });
+const settingsSchema = z.object({
+  language: z.enum(['en', 'ja']).optional(),
+  managerRoleIds: z.array(z.string().min(1)).optional(),
+  giveawayChannelIds: z.array(z.string().min(1)).optional(),
+  defaultClaimDeadline: z.preprocess((value) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }, z.string().nullable().optional())
+});
 
 function requireAdminToken(req: Request): void {
   const adminToken = process.env.ADMIN_API_TOKEN;
@@ -105,6 +119,53 @@ export function createApiServer(client: Client) {
     const guildId = requireParamString(req, 'guildId');
     await setManagerRoleIds(guildId, body.roleIds);
     res.json({ ok: true });
+  }));
+
+  app.get('/api/settings/:guildId', withApiErrorHandling(async (req, res) => {
+    const guildId = requireParamString(req, 'guildId');
+    const settings = await getGuildSettings(guildId);
+    res.json({ settings });
+  }));
+
+  app.put('/api/settings/:guildId', withApiErrorHandling(async (req, res) => {
+    requireAdminToken(req);
+    const body = settingsSchema.parse(req.body);
+    const guildId = requireParamString(req, 'guildId');
+    const current = await getGuildSettings(guildId);
+
+    await setGuildSettings(guildId, {
+      language: body.language ?? current.language,
+      managerRoleIds: body.managerRoleIds ?? current.managerRoleIds,
+      giveawayChannelIds: body.giveawayChannelIds ?? current.giveawayChannelIds,
+      defaultClaimDeadline:
+        body.defaultClaimDeadline !== undefined ? body.defaultClaimDeadline : current.defaultClaimDeadline
+    });
+    res.json({ ok: true });
+  }));
+
+  app.get('/api/guilds/:guildId/options', withApiErrorHandling(async (req, res) => {
+    requireAdminToken(req);
+    const guildId = requireParamString(req, 'guildId');
+    const guild = await client.guilds.fetch(guildId).catch(() => null);
+    if (!guild) {
+      throw new AppError('Guild not found.', 404);
+    }
+
+    const roleCollection = await guild.roles.fetch();
+    const roles = roleCollection
+      .map((role) => ({ id: role.id, name: role.name }))
+      .filter((role) => role.id !== guild.id)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const channelCollection = await guild.channels.fetch();
+    const channels = channelCollection
+      .toJSON()
+      .filter((channel): channel is NonNullable<typeof channel> => channel !== null)
+      .filter((channel) => channel.type === ChannelType.GuildText)
+      .map((channel) => ({ id: channel.id, name: channel.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    res.json({ roles, channels });
   }));
 
   app.get('/api/giveaways/:guildId', withApiErrorHandling(async (req, res) => {
