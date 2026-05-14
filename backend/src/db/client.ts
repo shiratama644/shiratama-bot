@@ -72,6 +72,7 @@ export async function initSchema(): Promise<void> {
       CREATE TABLE IF NOT EXISTS guild_settings (
         guild_id TEXT PRIMARY KEY,
         manager_role_ids TEXT[] NOT NULL DEFAULT '{}',
+        dashboard_role_ids TEXT[] NOT NULL DEFAULT '{}',
         language TEXT NOT NULL DEFAULT 'en',
         giveaway_channel_ids TEXT[] NOT NULL DEFAULT '{}',
         default_claim_deadline TEXT
@@ -112,6 +113,7 @@ export async function initSchema(): Promise<void> {
       ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
       ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS giveaway_channel_ids TEXT[] NOT NULL DEFAULT '{}';
       ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS default_claim_deadline TEXT;
+      ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS dashboard_role_ids TEXT[] NOT NULL DEFAULT '{}';
       ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS claim_deadline TEXT;
       ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winners TEXT[] NOT NULL DEFAULT '{}';
     `).execute(getDb());

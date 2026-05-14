@@ -34,6 +34,7 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
       return {
         guildId,
         managerRoleIds: [],
+        dashboardRoleIds: [],
         language: 'en',
         giveawayChannelIds: [],
         defaultClaimDeadline: null
@@ -42,6 +43,7 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
     return {
       guildId: row.guild_id,
       managerRoleIds: row.manager_role_ids ?? [],
+      dashboardRoleIds: row.dashboard_role_ids ?? [],
       language: row.language ?? 'en',
       giveawayChannelIds: row.giveaway_channel_ids ?? [],
       defaultClaimDeadline: row.default_claim_deadline
@@ -52,6 +54,7 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
 export async function setGuildSettings(guildId: string, settings: Partial<Omit<GuildSettings, 'guildId'>>): Promise<void> {
   await runDb(async () => {
     const managerRoleIds = settings.managerRoleIds ?? [];
+    const dashboardRoleIds = settings.dashboardRoleIds ?? [];
     const language = settings.language ?? 'en';
     const giveawayChannelIds = settings.giveawayChannelIds ?? [];
     const defaultClaimDeadline = settings.defaultClaimDeadline ?? null;
@@ -60,6 +63,7 @@ export async function setGuildSettings(guildId: string, settings: Partial<Omit<G
       .values({
         guild_id: guildId,
         manager_role_ids: managerRoleIds,
+        dashboard_role_ids: dashboardRoleIds,
         language,
         giveaway_channel_ids: giveawayChannelIds,
         default_claim_deadline: defaultClaimDeadline
@@ -67,6 +71,7 @@ export async function setGuildSettings(guildId: string, settings: Partial<Omit<G
       .onConflict((oc) =>
         oc.column('guild_id').doUpdateSet({
           manager_role_ids: managerRoleIds,
+          dashboard_role_ids: dashboardRoleIds,
           language,
           giveaway_channel_ids: giveawayChannelIds,
           default_claim_deadline: defaultClaimDeadline

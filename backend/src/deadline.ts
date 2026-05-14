@@ -3,26 +3,39 @@ import customParseFormat from 'dayjs/plugin/customParseFormat.js';
 
 dayjs.extend(customParseFormat);
 
-const DURATION_RE = /^(\d+)(m|h|d)$/i;
+const COMPOUND_DURATION_RE = /^(?:(\d+)w)?(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?$/i;
+
+function parseCompoundDuration(value: string): Date | null {
+  const trimmed = value.trim();
+  const match = trimmed.match(COMPOUND_DURATION_RE);
+  if (!match) return null;
+  const [, w, d, h, m] = match;
+  if (!w && !d && !h && !m) return null;
+  const totalMs =
+    ((Number(w ?? 0) * 7 * 24 * 3600) +
+     (Number(d ?? 0) * 24 * 3600) +
+     (Number(h ?? 0) * 3600) +
+     (Number(m ?? 0) * 60)) * 1000;
+  if (totalMs <= 0) return null;
+  return new Date(Date.now() + totalMs);
+}
 
 export function parseDeadline(input: string): Date {
   const value = input.trim();
-  const durationMatch = value.match(DURATION_RE);
 
-  if (durationMatch) {
-    const amount = Number(durationMatch[1]);
-    const unit = durationMatch[2].toLowerCase();
-    if (amount <= 0) {
-      throw new Error('The deadline must be greater than 0.');
-    }
-    const result = dayjs().add(amount, unit as 'm' | 'h' | 'd');
-    return result.toDate();
-  }
+  // Try compound duration (1w, 1h, 30m, 1w2d3h, etc.)
+  const compoundDate = parseCompoundDuration(value);
+  if (compoundDate) return compoundDate;
 
-  const parsed = dayjs(value, 'YYYY/MM/DD', true);
-  if (!parsed.isValid()) {
-    throw new Error('Deadline must be in YYYY/MM/DD or 10m/10h/5d format.');
-  }
+  // Try YYYY/MM/DD (strict)
+  const slashDate = dayjs(value, 'YYYY/MM/DD', true);
+  if (slashDate.isValid()) return slashDate.endOf('day').toDate();
 
-  return parsed.endOf('day').toDate();
+  // Try ISO 8601 and other datetime formats via dayjs
+  const isoDate = dayjs(value);
+  if (isoDate.isValid()) return isoDate.toDate();
+
+  throw new Error(
+    'Deadline must be a duration (e.g. 1h, 1w2d3h), YYYY/MM/DD, or ISO 8601 datetime.'
+  );
 }
