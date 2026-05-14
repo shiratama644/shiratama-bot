@@ -6,7 +6,7 @@
   "scripts": {
     "build": "pnpm --filter backend build && pnpm --filter web build",
     "dev": "pnpm --filter backend dev",
-    "dev:web": "pnpm --filter web dev",
+    "dev:web": "tsx scripts/dev-web.ts",
     "dev:all": "concurrently -n backend,web -c blue,magenta \"pnpm run dev\" \"pnpm run dev:web\"",
     "test": "pnpm --filter backend build && node --test _test_/*.test.mjs && pnpm --filter backend test",
     "lint": "pnpm --filter backend lint && pnpm --filter web lint"
@@ -26,6 +26,7 @@
   "private": true,
   "packageManager": "pnpm@11.1.1",
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "tsx": "^4.21.0"
   }
 }
