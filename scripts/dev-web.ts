@@ -3,18 +3,18 @@ import { existsSync } from 'node:fs';
 import { platform, arch } from 'node:os';
 
 /**
- * Constants for UI Feedback
+ * UIフィードバック用のカラー定数
  */
 const COLORS = {
   RESET: '\x1b[0m',
-  SUCCESS: '\x1b[32m', // Green
-  WARNING: '\x1b[33m', // Yellow
-  INFO: '\x1b[36m',    // Cyan
-  DIM: '\x1b[90m',     // Gray
+  SUCCESS: '\x1b[32m', // 緑
+  WARNING: '\x1b[33m', // 黄色
+  INFO: '\x1b[36m',    // シアン
+  DIM: '\x1b[90m',     // グレー
 } as const;
 
 /**
- * Result of environment check
+ * 環境チェックの結果型定義
  */
 interface CompatibilityResult {
   canUseTurbo: boolean;
@@ -22,12 +22,12 @@ interface CompatibilityResult {
 }
 
 /**
- * Detects if the current environment is compatible with Turbo Pack.
- * Next.js Turbo Pack (Rust-based) has specific requirements for libc and architecture.
+ * 現在の実行環境が Turbo Pack と互換性があるか判定します。
+ * Termux (Android) や非サポートのOS/アーキテクチャを検知します。
  */
 function checkTurboCompatibility(): CompatibilityResult {
-  // 1. Termux Detection (Android-based Linux)
-  // Termux uses Bionic libc, which is incompatible with standard glibc/musl Rust binaries.
+  // 1. Termux の判定 (Android Linux)
+  // Termux は Bionic libc を使用しており、標準的な Rust バイナリと互換性がありません。
   const isTermux = 
     !!process.env.TERMUX_VERSION || 
     process.env.PREFIX?.includes('com.termux') || 
@@ -37,13 +37,13 @@ function checkTurboCompatibility(): CompatibilityResult {
     return { canUseTurbo: false, reason: 'Termux environment (Bionic libc incompatibility)' };
   }
 
-  // 2. OS Support
+  // 2. サポート対象 OS の判定
   const supportedPlatforms = ['win32', 'darwin', 'linux'];
   if (!supportedPlatforms.includes(platform())) {
     return { canUseTurbo: false, reason: `Unsupported OS: ${platform()}` };
   }
 
-  // 3. Architecture Support
+  // 3. サポート対象アーキテクチャの判定
   const supportedArches = ['x64', 'arm64'];
   if (!supportedArches.includes(arch())) {
     return { canUseTurbo: false, reason: `Unsupported Architecture: ${arch()}` };
@@ -53,19 +53,22 @@ function checkTurboCompatibility(): CompatibilityResult {
 }
 
 /**
- * Main Application Logic
+ * 開発サーバーの起動メインロジック
  */
 async function launchDevServer() {
   const { canUseTurbo, reason } = checkTurboCompatibility();
   
-  // Base command: pnpm --filter web exec next dev
+  // 基本コマンド: pnpm --filter web exec next dev
+  // ポート 3000 の競合を避けるため、フロントエンドは明示的に 3001 を使用します
   const command = 'pnpm';
-  const args = ['--filter', 'web', 'exec', 'next', 'dev'];
+  const args = ['--filter', 'web', 'exec', 'next', 'dev', '-p', '3001'];
 
   if (canUseTurbo) {
     args.push('--turbo');
     console.log(`${COLORS.SUCCESS}⚡ Turbo Pack enabled${COLORS.RESET}`);
   } else {
+    // Next.js 15+ では --webpack を指定することで WASM 版 Turbopack のエラーを確実に回避できます
+    args.push('--webpack');
     console.log(`${COLORS.WARNING}⚠️  Falling back to Webpack${COLORS.RESET} ${COLORS.DIM}(Reason: ${reason})${COLORS.RESET}`);
   }
 
@@ -74,9 +77,10 @@ async function launchDevServer() {
   const child: ChildProcess = spawn(command, args, {
     stdio: 'inherit',
     shell: true,
+    cwd: process.cwd()
   });
 
-  // Handle process termination
+  // シグナル転送の設定 (Ctrl+C 等で子プロセスも終了させる)
   const handleSignal = (signal: NodeJS.Signals) => {
     if (child.pid) child.kill(signal);
   };
@@ -94,7 +98,7 @@ async function launchDevServer() {
   });
 }
 
-// Start execution
+// 実行開始
 launchDevServer().catch((err) => {
   console.error('Fatal Error:', err);
   process.exit(1);
