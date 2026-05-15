@@ -71,7 +71,8 @@ export async function initSchema(): Promise<void> {
     await sql.raw(`
       CREATE TABLE IF NOT EXISTS guild_settings (
         guild_id TEXT PRIMARY KEY,
-        manager_role_ids TEXT[] NOT NULL DEFAULT '{}',
+        giveaway_creator_role_ids TEXT[] NOT NULL DEFAULT '{}',
+        dashboard_view_role_ids TEXT[] NOT NULL DEFAULT '{}',
         language TEXT NOT NULL DEFAULT 'en',
         giveaway_channel_ids TEXT[] NOT NULL DEFAULT '{}',
         default_claim_deadline TEXT
@@ -112,8 +113,14 @@ export async function initSchema(): Promise<void> {
       ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'en';
       ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS giveaway_channel_ids TEXT[] NOT NULL DEFAULT '{}';
       ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS default_claim_deadline TEXT;
+      ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS manager_role_ids TEXT[] NOT NULL DEFAULT '{}';
+      ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS giveaway_creator_role_ids TEXT[] NOT NULL DEFAULT '{}';
+      ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS dashboard_view_role_ids TEXT[] NOT NULL DEFAULT '{}';
       ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS claim_deadline TEXT;
       ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winners TEXT[] NOT NULL DEFAULT '{}';
+      UPDATE guild_settings
+      SET giveaway_creator_role_ids = manager_role_ids
+      WHERE cardinality(giveaway_creator_role_ids) = 0 AND manager_role_ids IS NOT NULL;
     `).execute(getDb());
 
     logger.info('Database schema initialized successfully');

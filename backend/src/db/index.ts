@@ -1,5 +1,12 @@
 export { initSchema } from './client.js';
-export { getManagerRoleIds, setManagerRoleIds, getGuildSettings, setGuildSettings } from './guildSettings.js';
+export {
+  getGiveawayCreatorRoleIds,
+  setGiveawayCreatorRoleIds,
+  getManagerRoleIds,
+  setManagerRoleIds,
+  getGuildSettings,
+  setGuildSettings
+} from './guildSettings.js';
 export {
   createGiveaway,
   updateGiveawayStatus,

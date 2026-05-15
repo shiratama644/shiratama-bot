@@ -1,9 +1,18 @@
-import { hc } from 'hono/client';
-
 export type GuildSummary = { id: string; name: string; iconUrl: string | null };
 export type RoleSummary = { id: string; name: string };
 export type ChannelSummary = { id: string; name: string };
 export type MemberSummary = { id: string; name: string; avatarUrl: string };
+
+export type AuthGuild = GuildSummary & {
+  canViewDashboard: boolean;
+  canCreateGiveaway: boolean;
+  isAdmin: boolean;
+};
+
+export type AuthSession = {
+  user: { id: string; name: string; avatarUrl: string };
+  guilds: AuthGuild[];
+};
 
 export type GuildOptions = {
   guild: GuildSummary;
@@ -14,7 +23,8 @@ export type GuildOptions = {
 
 export type GuildSettings = {
   guildId: string;
-  managerRoleIds: string[];
+  giveawayCreatorRoleIds: string[];
+  dashboardViewRoleIds: string[];
   language: string;
   giveawayChannelIds: string[];
   defaultClaimDeadline: string | null;
@@ -39,84 +49,6 @@ export type Giveaway = {
 };
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
-const adminToken = process.env.NEXT_PUBLIC_ADMIN_API_TOKEN;
-
-type RpcClient = {
-  api: {
-    guilds: {
-      $get: (
-        args?: Record<string, never>,
-        options?: { headers?: Record<string, string> }
-      ) => Promise<Response>;
-      ':guildId': {
-        options: {
-          $get: (
-            args: { param: { guildId: string } },
-            options?: { headers?: Record<string, string> }
-          ) => Promise<Response>;
-        };
-      };
-    };
-    settings: {
-      ':guildId': {
-        $get: (args: { param: { guildId: string } }) => Promise<Response>;
-        $put: (
-          args: {
-            param: { guildId: string };
-            json: {
-              language: 'en' | 'ja';
-              managerRoleIds: string[];
-              giveawayChannelIds: string[];
-              defaultClaimDeadline: string | null;
-            };
-          },
-          options?: { headers?: Record<string, string> }
-        ) => Promise<Response>;
-      };
-    };
-    giveaways: {
-      $post: (
-        args: {
-          json: {
-            guildId: string;
-            channelId: string;
-            title: string;
-            description?: string;
-            deadline: string;
-            winnerCount: number;
-          };
-        },
-        options?: { headers?: Record<string, string> }
-      ) => Promise<Response>;
-      ':guildId': {
-        $get: (args: { param: { guildId: string } }) => Promise<Response>;
-      };
-      ':id': {
-        end: {
-          $post: (
-            args: { param: { id: string }; json: { guildId: string } },
-            options?: { headers?: Record<string, string> }
-          ) => Promise<Response>;
-        };
-        reroll: {
-          $post: (
-            args: { param: { id: string }; json: { guildId: string } },
-            options?: { headers?: Record<string, string> }
-          ) => Promise<Response>;
-        };
-      };
-    };
-  };
-};
-
-const client = hc(baseUrl) as unknown as RpcClient;
-
-function getAdminHeaders(extra: Record<string, string> = {}) {
-  return {
-    ...(adminToken ? { 'x-admin-token': adminToken } : {}),
-    ...extra
-  };
-}
 
 async function parseResponse<T>(response: Response): Promise<T> {
   const data = await response.json();
@@ -126,23 +58,43 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return data as T;
 }
 
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${baseUrl}${path}`, {
+    credentials: 'include',
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers ?? {})
+    }
+  });
+  return parseResponse<T>(response);
+}
+
+export function getLoginUrl() {
+  return `${baseUrl}/api/auth/login`;
+}
+
+export async function fetchAuthSession() {
+  return apiFetch<AuthSession>('/api/auth/session');
+}
+
+export async function logout() {
+  return apiFetch<{ ok: boolean }>('/api/auth/logout', {
+    method: 'POST'
+  });
+}
+
 export async function fetchGuilds() {
-  const response = await client.api.guilds.$get({}, { headers: getAdminHeaders() });
-  const payload = await parseResponse<{ guilds: GuildSummary[] }>(response);
+  const payload = await apiFetch<{ guilds: GuildSummary[] }>('/api/guilds');
   return payload.guilds;
 }
 
 export async function fetchGuildOptions(guildId: string) {
-  const response = await client.api.guilds[':guildId'].options.$get(
-    { param: { guildId } },
-    { headers: getAdminHeaders() }
-  );
-  return parseResponse<GuildOptions>(response);
+  return apiFetch<GuildOptions>(`/api/guilds/${guildId}/options`);
 }
 
 export async function fetchSettings(guildId: string) {
-  const response = await client.api.settings[':guildId'].$get({ param: { guildId } });
-  const payload = await parseResponse<{ settings: GuildSettings }>(response);
+  const payload = await apiFetch<{ settings: GuildSettings }>(`/api/settings/${guildId}`);
   return payload.settings;
 }
 
@@ -150,24 +102,20 @@ export async function updateSettings(
   guildId: string,
   input: {
     language: 'en' | 'ja';
-    managerRoleIds: string[];
+    giveawayCreatorRoleIds: string[];
+    dashboardViewRoleIds: string[];
     giveawayChannelIds: string[];
     defaultClaimDeadline: string | null;
   }
 ) {
-  const response = await client.api.settings[':guildId'].$put(
-    {
-      param: { guildId },
-      json: input
-    },
-    { headers: getAdminHeaders() }
-  );
-  return parseResponse<{ ok: boolean }>(response);
+  return apiFetch<{ ok: boolean }>(`/api/settings/${guildId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input)
+  });
 }
 
 export async function fetchGiveaways(guildId: string) {
-  const response = await client.api.giveaways[':guildId'].$get({ param: { guildId } });
-  const payload = await parseResponse<{ giveaways: Giveaway[] }>(response);
+  const payload = await apiFetch<{ giveaways: Giveaway[] }>(`/api/giveaways/${guildId}`);
   return payload.giveaways;
 }
 
@@ -178,42 +126,24 @@ export async function createGiveaway(input: {
   description?: string;
   deadline: string;
   winnerCount: number;
-  userId: string;
+  autoRepeat: boolean;
 }) {
-  const response = await client.api.giveaways.$post(
-    {
-      json: {
-        guildId: input.guildId,
-        channelId: input.channelId,
-        title: input.title,
-        description: input.description,
-        deadline: input.deadline,
-        winnerCount: input.winnerCount
-      }
-    },
-    { headers: getAdminHeaders({ 'x-user-id': input.userId }) }
-  );
-  return parseResponse<{ giveaway: Giveaway }>(response);
+  return apiFetch<{ giveaway: Giveaway }>('/api/giveaways', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  });
 }
 
 export async function endGiveaway(giveawayId: string, guildId: string) {
-  const response = await client.api.giveaways[':id'].end.$post(
-    {
-      param: { id: giveawayId },
-      json: { guildId }
-    },
-    { headers: getAdminHeaders() }
-  );
-  return parseResponse<{ ok: boolean }>(response);
+  return apiFetch<{ ok: boolean }>(`/api/giveaways/${giveawayId}/end`, {
+    method: 'POST',
+    body: JSON.stringify({ guildId })
+  });
 }
 
 export async function rerollGiveaway(giveawayId: string, guildId: string) {
-  const response = await client.api.giveaways[':id'].reroll.$post(
-    {
-      param: { id: giveawayId },
-      json: { guildId }
-    },
-    { headers: getAdminHeaders() }
-  );
-  return parseResponse<{ winners: string[] }>(response);
+  return apiFetch<{ winners: string[] }>(`/api/giveaways/${giveawayId}/reroll`, {
+    method: 'POST',
+    body: JSON.stringify({ guildId })
+  });
 }
