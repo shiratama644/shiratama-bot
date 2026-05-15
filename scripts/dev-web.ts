@@ -59,9 +59,9 @@ async function launchDevServer() {
   const { canUseTurbo, reason } = checkTurboCompatibility();
   
   // 基本コマンド: pnpm --filter web exec next dev
-  // ポート 3000 の競合を避けるため、フロントエンドは明示的に 3001 を使用します
+  // ポート 3000 の競合を避けるため、フロントエンドは明示的に 5173 を使用します
   const command = 'pnpm';
-  const args = ['--filter', 'web', 'exec', 'next', 'dev', '-p', '3001'];
+  const args = ['--filter', 'web', 'exec', 'next', 'dev', '-p', '5173'];
 
   if (canUseTurbo) {
     args.push('--turbo');
