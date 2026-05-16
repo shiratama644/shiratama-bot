@@ -106,6 +106,18 @@ export async function getActiveGiveaways(guildId: string): Promise<Giveaway[]> {
   }, 'getActiveGiveaways');
 }
 
+export async function getGuildGiveaways(guildId: string): Promise<Giveaway[]> {
+  return runDb(async () => {
+    const rows = await getDb()
+      .selectFrom('giveaways')
+      .selectAll()
+      .where('guild_id', '=', guildId)
+      .orderBy('created_at', 'desc')
+      .execute();
+    return rows.map((row) => mapGiveaway(row));
+  }, 'getGuildGiveaways');
+}
+
 export async function getEndedGiveaways(guildId: string): Promise<Giveaway[]> {
   return runDb(async () => {
     const rows = await getDb()

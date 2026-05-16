@@ -15,6 +15,7 @@ export {
   setGiveawayMessageId,
   getGiveaway,
   getActiveGiveaways,
+  getGuildGiveaways,
   getEndedGiveaways,
   getDueGiveaways,
   markGiveawayEnded,

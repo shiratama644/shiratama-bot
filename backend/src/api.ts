@@ -10,7 +10,7 @@ import {
 } from 'discord.js';
 import {
   getGiveaway,
-  getActiveGiveaways,
+  getGuildGiveaways,
   getGuildSettings,
   setGuildSettings
 } from './db/index.js';
@@ -28,6 +28,7 @@ type AuthGuild = {
   canViewDashboard: boolean;
   canCreateGiveaway: boolean;
   isAdmin: boolean;
+  isOwner: boolean;
 };
 
 type AuthSession = {
@@ -232,7 +233,8 @@ async function createSessionFromOAuth(client: Client, accessToken: string): Prom
       iconUrl: guild.iconURL({ size: 64, extension: 'png' }),
       canViewDashboard: hasAdminPermission || hasDashboardRole,
       canCreateGiveaway: hasAdminPermission || hasCreatorRole,
-      isAdmin: hasAdminPermission
+      isAdmin: hasAdminPermission,
+      isOwner: oauthGuild.owner
     });
   }
 
@@ -485,7 +487,7 @@ export function createApiApp(client: Client) {
       const guildId = requireParam(c.req.param('guildId'), 'guildId');
       const session = requireSession(c);
       getSessionGuild(session, guildId);
-      const giveaways = await getActiveGiveaways(guildId);
+      const giveaways = await getGuildGiveaways(guildId);
       return c.json({ giveaways });
     } catch (error) {
       return respondError(c, error);
@@ -515,7 +517,8 @@ export function createApiApp(client: Client) {
         deadlineInput: body.deadline,
         winnerCount: body.winnerCount,
         createdBy: session.user.id,
-        interval: body.autoRepeat ? body.deadline : undefined
+        interval: body.autoRepeat ? body.deadline : undefined,
+        claimDeadline: settings.defaultClaimDeadline
       });
       return c.json({ giveaway: created });
     } catch (error) {

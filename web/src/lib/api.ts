@@ -7,6 +7,7 @@ export type AuthGuild = GuildSummary & {
   canViewDashboard: boolean;
   canCreateGiveaway: boolean;
   isAdmin: boolean;
+  isOwner: boolean;
 };
 
 export type AuthSession = {
