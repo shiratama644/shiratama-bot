@@ -13,7 +13,7 @@ import {
 } from 'discord.js';
 import { Command } from './index.js';
 import { getGuildSettings } from '../../../db/index.js';
-import { assertCanManageGiveaways } from './permissions.js';
+import { assertCanManageGiveaways } from '../permissions.js';
 import {
     FIELD_SETTINGS_DEFCLAIM,
     FIELD_SETTINGS_LANGUAGE,
@@ -25,7 +25,7 @@ import {
 } from '../../../shared/constants/ids.js';
 import { t } from '../../../shared/i18n/index.js';
 
-export const gsettingsCommand: Command = {
+export const settingsCommand: Command = {
     name: 'gsettings',
     description: 'Open settings',
     execute: async (client: Client, interaction: ChatInputCommandInteraction) => {

@@ -1,7 +1,7 @@
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { getGiveawayCreatorRoleIds, getGuildSettings } from '../../../db/index.js';
-import { AppError } from '../../../shared/errors/index.js';
-import { DEFAULT_LANGUAGE, t } from '../../../shared/i18n/index.js';
+import { getGiveawayCreatorRoleIds, getGuildSettings } from '../../db/index.js';
+import { AppError } from '../../shared/errors/index.js';
+import { DEFAULT_LANGUAGE, t } from '../../shared/i18n/index.js';
 
 export function hasAnyRequiredRole(memberRoleIds: ReadonlySet<string>, requiredRoleIds: readonly string[]): boolean {
   return requiredRoleIds.some((roleId) => memberRoleIds.has(roleId));

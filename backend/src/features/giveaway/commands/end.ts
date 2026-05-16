@@ -2,11 +2,12 @@ import { ChatInputCommandInteraction, Client, AutocompleteInteraction } from 'di
 import { Command } from './index.js';
 import { endGiveaway } from '../index.js';
 import { getActiveGiveaways, getGuildSettings } from '../../../db/index.js';
-import { assertCanManageGiveaways } from './permissions.js';
+import { assertCanManageGiveaways } from '../permissions.js';
 import { ensureGiveawayInGuild } from '../index.js';
 import { t } from '../../../shared/i18n/index.js';
+import { respondGiveawayAutocomplete } from './autocomplete.js';
 
-export const gendCommand: Command = {
+export const endCommand: Command = {
   name: 'gend',
   description: 'Manually end the selected giveaway',
   options: [
@@ -32,10 +33,6 @@ export const gendCommand: Command = {
   autocomplete: async (interaction: AutocompleteInteraction) => {
     if (!interaction.guildId) return;
     const active = await getActiveGiveaways(interaction.guildId);
-    const focusedValue = interaction.options.getFocused();
-    const filtered = active.filter(g => g.title.includes(focusedValue) || g.id.includes(focusedValue));
-    await interaction.respond(
-      filtered.slice(0, 25).map(g => ({ name: `${g.title} (${g.id})`, value: g.id }))
-    );
+    await respondGiveawayAutocomplete(interaction, active);
   }
 };

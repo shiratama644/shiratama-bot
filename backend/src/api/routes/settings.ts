@@ -2,8 +2,9 @@ import type { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { getGuildSettings, setGuildSettings } from '../../db/index.js';
 import { AppError } from '../../shared/errors/index.js';
-import { getSessionGuild, requireParam, respondError, settingsSchema } from '../shared.js';
-import { requireSession } from '../session.js';
+import { getSessionGuild, requireSession } from '../../features/auth/index.js';
+import { settingsSchema } from '../schemas/settings.js';
+import { requireParam, respondError } from '../utils/response.js';
 
 export function registerSettingsRoutes(app: Hono): void {
   app.get('/api/settings/:guildId', async (c) => {

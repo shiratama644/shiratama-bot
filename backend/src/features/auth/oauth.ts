@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import type { Client } from 'discord.js';
-import { getGuildSettings } from '../db/index.js';
-import { AppError } from '../shared/errors/index.js';
-import type { AuthGuild, AuthSession } from './shared.js';
-import { SESSION_TTL_MS } from './session.js';
+import { getGuildSettings } from '../../db/index.js';
+import { AppError } from '../../shared/errors/index.js';
+import { SESSION_TTL_MS } from './constants.js';
+import type { AuthGuild, AuthSession } from './types.js';
 
 function buildDiscordAvatarUrl(user: { id: string; avatar: string | null }): string {
   if (!user.avatar) {
