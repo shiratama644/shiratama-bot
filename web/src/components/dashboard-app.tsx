@@ -364,7 +364,7 @@ function DashboardContent() {
         <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-lg font-semibold">AppleJP Bot Dashboard</h1>
           <p className="mt-2 text-sm text-slate-600">
-            Discord OAuth2でログインすると、このBotが参加しているサーバー一覧を確認できます。
+            Discord OAuth2でログインすると、このBotが参加しているサーバー一覧を確認できます。オーナーまたはダッシュボード使用可能ロールがあるサーバーは選択して操作できます。
           </p>
           <button
             type="button"
