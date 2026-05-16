@@ -10,3 +10,13 @@ body {
   margin: 0;
   padding: 0;
 }
+
+.dashboard-datepicker-popper {
+  max-width: calc(100vw - 1rem);
+  z-index: 30;
+}
+
+.dashboard-datepicker-calendar {
+  max-width: calc(100vw - 1rem);
+  width: min(22rem, calc(100vw - 1rem));
+}

@@ -4,13 +4,12 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import {
   ChannelType,
-  PermissionsBitField,
   type Client,
   type Guild
 } from 'discord.js';
 import {
   getGiveaway,
-  getActiveGiveaways,
+  getGuildGiveaways,
   getGuildSettings,
   setGuildSettings
 } from './db/index.js';
@@ -25,9 +24,9 @@ type AuthGuild = {
   id: string;
   name: string;
   iconUrl: string | null;
-  canViewDashboard: boolean;
+  canUseDashboard: boolean;
   canCreateGiveaway: boolean;
-  isAdmin: boolean;
+  isOwner: boolean;
 };
 
 type AuthSession = {
@@ -59,6 +58,8 @@ const guildBodySchema = z.object({ guildId: z.string().min(1) });
 const settingsSchema = z.object({
   language: z.enum(['en', 'ja']).optional(),
   giveawayCreatorRoleIds: z.array(z.string().min(1)).optional(),
+  dashboardUsableRoleIds: z.array(z.string().min(1)).optional(),
+  // deprecated: kept for backward compatibility with older web clients
   dashboardViewRoleIds: z.array(z.string().min(1)).optional(),
   giveawayChannelIds: z.array(z.string().min(1)).optional(),
   defaultClaimDeadline: z.preprocess((value) => {
@@ -185,7 +186,7 @@ function requireSession(c: { req: { header: (key: string) => string | undefined 
 
 function getSessionGuild(session: AuthSession, guildId: string): AuthGuild {
   const guild = session.guilds.find((item) => item.id === guildId);
-  if (!guild || !guild.canViewDashboard) {
+  if (!guild || !guild.canUseDashboard) {
     throw new AppError('You do not have permission to access this server dashboard.', 403);
   }
   return guild;
@@ -219,9 +220,7 @@ async function createSessionFromOAuth(client: Client, accessToken: string): Prom
     if (!member) {
       continue;
     }
-    const permissionBits = BigInt(oauthGuild.permissions);
-    const hasAdminPermission = oauthGuild.owner || (permissionBits & PermissionsBitField.Flags.Administrator) !== 0n;
-    const hasDashboardRole = settings.dashboardViewRoleIds.some((roleId) => member.roles.cache.has(roleId));
+    const hasDashboardRole = settings.dashboardUsableRoleIds.some((roleId) => member.roles.cache.has(roleId));
     const hasCreatorRole =
       settings.giveawayCreatorRoleIds.length === 0 ||
       settings.giveawayCreatorRoleIds.some((roleId) => member.roles.cache.has(roleId));
@@ -230,15 +229,10 @@ async function createSessionFromOAuth(client: Client, accessToken: string): Prom
       id: guild.id,
       name: guild.name,
       iconUrl: guild.iconURL({ size: 64, extension: 'png' }),
-      canViewDashboard: hasAdminPermission || hasDashboardRole,
-      canCreateGiveaway: hasAdminPermission || hasCreatorRole,
-      isAdmin: hasAdminPermission
+      canUseDashboard: oauthGuild.owner || hasDashboardRole,
+      canCreateGiveaway: oauthGuild.owner || hasCreatorRole,
+      isOwner: oauthGuild.owner
     });
-  }
-
-  const visibleGuilds = guilds.filter((guild) => guild.canViewDashboard);
-  if (visibleGuilds.length === 0) {
-    throw new AppError('No dashboard access for your account in this bot server.', 403);
   }
 
   return {
@@ -248,7 +242,7 @@ async function createSessionFromOAuth(client: Client, accessToken: string): Prom
       name: user.global_name ?? user.username,
       avatarUrl: buildDiscordAvatarUrl({ id: user.id, avatar: user.avatar })
     },
-    guilds: visibleGuilds.sort((a, b) => a.name.localeCompare(b.name)),
+    guilds: guilds.sort((a, b) => a.name.localeCompare(b.name)),
     expiresAt: Date.now() + SESSION_TTL_MS
   };
 }
@@ -419,16 +413,18 @@ export function createApiApp(client: Client) {
       const guildId = requireParam(c.req.param('guildId'), 'guildId');
       const session = requireSession(c);
       const guild = getSessionGuild(session, guildId);
-      if (!guild.isAdmin) {
-        throw new AppError('Only server administrators can update settings.', 403);
+      if (!guild.isOwner) {
+        throw new AppError('Only server owners can update settings.', 403);
       }
       const body = c.req.valid('json');
       const current = await getGuildSettings(guildId);
+      // Backward compatibility for older clients that still send dashboardViewRoleIds.
+      const dashboardUsableRoleIds = body.dashboardUsableRoleIds ?? body.dashboardViewRoleIds;
 
       await setGuildSettings(guildId, {
         language: body.language ?? current.language,
         giveawayCreatorRoleIds: body.giveawayCreatorRoleIds ?? current.giveawayCreatorRoleIds,
-        dashboardViewRoleIds: body.dashboardViewRoleIds ?? current.dashboardViewRoleIds,
+        dashboardUsableRoleIds: dashboardUsableRoleIds ?? current.dashboardUsableRoleIds,
         giveawayChannelIds: body.giveawayChannelIds ?? current.giveawayChannelIds,
         defaultClaimDeadline:
           body.defaultClaimDeadline !== undefined ? body.defaultClaimDeadline : current.defaultClaimDeadline
@@ -485,7 +481,7 @@ export function createApiApp(client: Client) {
       const guildId = requireParam(c.req.param('guildId'), 'guildId');
       const session = requireSession(c);
       getSessionGuild(session, guildId);
-      const giveaways = await getActiveGiveaways(guildId);
+      const giveaways = await getGuildGiveaways(guildId);
       return c.json({ giveaways });
     } catch (error) {
       return respondError(c, error);
@@ -515,7 +511,8 @@ export function createApiApp(client: Client) {
         deadlineInput: body.deadline,
         winnerCount: body.winnerCount,
         createdBy: session.user.id,
-        interval: body.autoRepeat ? body.deadline : undefined
+        interval: body.autoRepeat ? body.deadline : undefined,
+        claimDeadline: settings.defaultClaimDeadline
       });
       return c.json({ giveaway: created });
     } catch (error) {

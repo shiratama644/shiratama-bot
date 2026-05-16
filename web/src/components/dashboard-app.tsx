@@ -28,16 +28,17 @@ import {
 type SelectOption = {
   value: string;
   label: string;
-  iconUrl?: string | null;
+  iconType: 'channel' | 'role';
 };
 
-type SectionKey = 'settings' | 'create' | 'active';
+type SectionKey = 'settings' | 'giveaway-create' | 'giveaway-list';
+type GiveawayFilterKey = 'all' | 'active' | 'claim-open' | 'claim-ended' | 'ended' | 'stopped';
 
 type SettingsDraft = {
   guildId: string;
   language: 'en' | 'ja';
   giveawayCreatorRoleIds: string[];
-  dashboardViewRoleIds: string[];
+  dashboardUsableRoleIds: string[];
   giveawayChannelIds: string[];
   defaultClaimDeadline: string;
 };
@@ -84,15 +85,32 @@ function parseIntervalMs(input: string): number | null {
   return total;
 }
 
+function stripLeadingMarker(name: string): string {
+  return name.replace(/^[@#]/, '').trimStart();
+}
+
+function getClaimState(giveaway: {
+  status: 'active' | 'ended' | 'stopped';
+  endAt: string;
+  claimDeadline: string | null;
+}): 'none' | 'open' | 'closed' {
+  if (giveaway.status !== 'ended' || !giveaway.claimDeadline) {
+    return 'none';
+  }
+  const claimDurationMs = parseIntervalMs(giveaway.claimDeadline);
+  if (!claimDurationMs || claimDurationMs <= 0) {
+    return 'none';
+  }
+  const claimDeadlineAt = new Date(giveaway.endAt).getTime() + claimDurationMs;
+  return Date.now() <= claimDeadlineAt ? 'open' : 'closed';
+}
+
 function OptionLabel({ option }: { option: SelectOption }) {
   return (
     <div className="flex items-center gap-2">
-      {option.iconUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={option.iconUrl} alt="" className="h-5 w-5 rounded-full" />
-      ) : (
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-xs">#</span>
-      )}
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-xs">
+        {option.iconType === 'role' ? '@' : '#'}
+      </span>
       <span>{option.label}</span>
     </div>
   );
@@ -101,7 +119,9 @@ function OptionLabel({ option }: { option: SelectOption }) {
 function DashboardContent() {
   const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [giveawayMenuOpen, setGiveawayMenuOpen] = useState(true);
   const [activeSection, setActiveSection] = useState<SectionKey>('settings');
+  const [giveawayFilter, setGiveawayFilter] = useState<GiveawayFilterKey>('all');
   const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
   const [settingsDraft, setSettingsDraft] = useState<SettingsDraft | null>(null);
 
@@ -120,7 +140,7 @@ function DashboardContent() {
   });
 
   const guilds = sessionQuery.data?.guilds;
-  const activeGuildId = selectedGuildId ?? guilds?.[0]?.id ?? null;
+  const activeGuildId = selectedGuildId;
 
   const optionsQuery = useQuery({
     queryKey: ['guild-options', activeGuildId],
@@ -144,7 +164,8 @@ function DashboardContent() {
     () =>
       (optionsQuery.data?.roles ?? []).map((role) => ({
         value: role.id,
-        label: `@${role.name}`
+        label: stripLeadingMarker(role.name),
+        iconType: 'role'
       })),
     [optionsQuery.data?.roles]
   );
@@ -153,7 +174,8 @@ function DashboardContent() {
     () =>
       (optionsQuery.data?.channels ?? []).map((channel) => ({
         value: channel.id,
-        label: `#${channel.name}`
+        label: stripLeadingMarker(channel.name),
+        iconType: 'channel'
       })),
     [optionsQuery.data?.channels]
   );
@@ -176,7 +198,7 @@ function DashboardContent() {
       guildId: activeGuildId,
       language: settingsQuery.data.language === 'ja' ? 'ja' : 'en',
       giveawayCreatorRoleIds: settingsQuery.data.giveawayCreatorRoleIds,
-      dashboardViewRoleIds: settingsQuery.data.dashboardViewRoleIds,
+      dashboardUsableRoleIds: settingsQuery.data.dashboardUsableRoleIds,
       giveawayChannelIds: settingsQuery.data.giveawayChannelIds,
       defaultClaimDeadline: settingsQuery.data.defaultClaimDeadline ?? ''
     };
@@ -199,6 +221,27 @@ function DashboardContent() {
     () => guilds?.find((guild) => guild.id === activeGuildId) ?? null,
     [guilds, activeGuildId]
   );
+  const canEditSettings = Boolean(currentSettings && activeGuildAccess?.isOwner);
+
+  const filteredGiveaways = useMemo(() => {
+    const giveaways = giveawaysQuery.data ?? [];
+    switch (giveawayFilter) {
+      case 'all':
+        return giveaways;
+      case 'active':
+        return giveaways.filter((giveaway) => giveaway.status === 'active');
+      case 'claim-open':
+        return giveaways.filter((giveaway) => getClaimState(giveaway) === 'open');
+      case 'claim-ended':
+        return giveaways.filter((giveaway) => getClaimState(giveaway) === 'closed');
+      case 'ended':
+        return giveaways.filter((giveaway) => giveaway.status === 'ended');
+      case 'stopped':
+        return giveaways.filter((giveaway) => giveaway.status === 'stopped');
+      default:
+        return giveaways;
+    }
+  }, [giveawayFilter, giveawaysQuery.data]);
 
   const updateCurrentSettings = (patch: Partial<SettingsDraft>) => {
     if (!settingsSeed) {
@@ -216,7 +259,7 @@ function DashboardContent() {
       return updateSettings(activeGuildId, {
         language: currentSettings.language,
         giveawayCreatorRoleIds: currentSettings.giveawayCreatorRoleIds,
-        dashboardViewRoleIds: currentSettings.dashboardViewRoleIds,
+        dashboardUsableRoleIds: currentSettings.dashboardUsableRoleIds,
         giveawayChannelIds: currentSettings.giveawayChannelIds,
         defaultClaimDeadline: currentSettings.defaultClaimDeadline.trim()
           ? currentSettings.defaultClaimDeadline.trim()
@@ -321,7 +364,7 @@ function DashboardContent() {
         <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-lg font-semibold">AppleJP Bot Dashboard</h1>
           <p className="mt-2 text-sm text-slate-600">
-            Discord OAuth2でログインすると、サーバー管理者またはダッシュボード閲覧可能ロールのユーザーが利用できます。
+            Discord OAuth2でログインすると、このBotが参加しているサーバー一覧を確認できます。オーナーまたはダッシュボード使用可能ロールがあるサーバーは選択して操作できます。
           </p>
           <button
             type="button"
@@ -335,6 +378,53 @@ function DashboardContent() {
           {sessionQuery.error ? (
             <p className="mt-3 text-xs text-rose-600">{String(sessionQuery.error)}</p>
           ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeGuildId) {
+    return (
+      <div className="min-h-screen bg-slate-100 p-4">
+        <div className="mx-auto w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h1 className="text-lg font-semibold">サーバー選択</h1>
+          <p className="mt-2 text-sm text-slate-600">
+            すべてのサーバー一覧を表示します。サーバーオーナーまたはダッシュボード使用可能ロールがあるサーバーのみ選択できます。
+          </p>
+          <div className="mt-4 space-y-2">
+            {(guilds ?? []).map((guild) => (
+              <button
+                type="button"
+                key={guild.id}
+                disabled={!guild.canUseDashboard}
+                onClick={() => {
+                  setSelectedGuildId(guild.id);
+                  setSettingsDraft(null);
+                }}
+                className={`flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-sm ${
+                  guild.canUseDashboard
+                    ? 'border-slate-300 hover:bg-slate-50'
+                    : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                }`}
+              >
+                {guild.iconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={guild.iconUrl} alt="" className="h-6 w-6 rounded-full" />
+                ) : (
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs">🏠</span>
+                )}
+                <span className="truncate">{guild.name}</span>
+                {!guild.canUseDashboard ? <span className="ml-auto text-xs">権限なし</span> : null}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => logoutMutation.mutate()}
+            className="mt-4 rounded-md border border-slate-300 px-3 py-2 text-xs hover:bg-slate-100"
+          >
+            ログアウト
+          </button>
         </div>
       </div>
     );
@@ -377,23 +467,50 @@ function DashboardContent() {
         </div>
 
         <div className="space-y-2">
-          {([
-            ['settings', 'サーバー設定'],
-            ['create', 'Giveaway作成'],
-            ['active', '進行中Giveaway']
-          ] as const).map(([key, label]) => (
+          <button
+            type="button"
+            onClick={() => {
+              setActiveSection('settings');
+              setMenuOpen(false);
+            }}
+            className={`w-full rounded-md px-2 py-2 text-left text-sm ${activeSection === 'settings' ? 'bg-indigo-100 text-indigo-800' : 'hover:bg-slate-100'}`}
+          >
+            サーバー設定
+          </button>
+          <div>
             <button
-              key={key}
               type="button"
-              onClick={() => {
-                setActiveSection(key);
-                setMenuOpen(false);
-              }}
-              className={`w-full rounded-md px-2 py-2 text-left text-sm ${activeSection === key ? 'bg-indigo-100 text-indigo-800' : 'hover:bg-slate-100'}`}
+              onClick={() => setGiveawayMenuOpen((value) => !value)}
+              className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left text-sm hover:bg-slate-100"
             >
-              {label}
+              <span>Giveaway</span>
+              <span className="text-xs text-slate-500">{giveawayMenuOpen ? '▾' : '▸'}</span>
             </button>
-          ))}
+            {giveawayMenuOpen ? (
+              <div className="ml-3 mt-1 space-y-1 border-l border-slate-200 pl-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSection('giveaway-create');
+                    setMenuOpen(false);
+                  }}
+                  className={`w-full rounded-md px-2 py-2 text-left text-sm ${activeSection === 'giveaway-create' ? 'bg-indigo-100 text-indigo-800' : 'hover:bg-slate-100'}`}
+                >
+                  Giveaway 作成
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSection('giveaway-list');
+                    setMenuOpen(false);
+                  }}
+                  className={`w-full rounded-md px-2 py-2 text-left text-sm ${activeSection === 'giveaway-list' ? 'bg-indigo-100 text-indigo-800' : 'hover:bg-slate-100'}`}
+                >
+                  Giveaway 一覧
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <h3 className="mb-2 mt-6 text-xs font-semibold text-slate-500">サーバー</h3>
@@ -403,11 +520,21 @@ function DashboardContent() {
               type="button"
               key={guild.id}
               onClick={() => {
+                if (!guild.canUseDashboard) {
+                  return;
+                }
                 setSelectedGuildId(guild.id);
                 setSettingsDraft(null);
                 setMenuOpen(false);
               }}
-              className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm ${guild.id === activeGuildId ? 'bg-indigo-100 text-indigo-800' : 'hover:bg-slate-100'}`}
+              disabled={!guild.canUseDashboard}
+              className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm ${
+                guild.id === activeGuildId
+                  ? 'bg-indigo-100 text-indigo-800'
+                  : guild.canUseDashboard
+                    ? 'hover:bg-slate-100'
+                    : 'cursor-not-allowed text-slate-400'
+              }`}
             >
               {guild.iconUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -416,6 +543,7 @@ function DashboardContent() {
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs">🏠</span>
               )}
               <span className="truncate">{guild.name}</span>
+              {!guild.canUseDashboard ? <span className="ml-auto text-[10px]">権限なし</span> : null}
             </button>
           ))}
         </div>
@@ -434,7 +562,7 @@ function DashboardContent() {
                     updateCurrentSettings({ language: event.target.value === 'ja' ? 'ja' : 'en' })
                   }
                   className="w-full rounded-md border border-slate-300 px-3 py-2"
-                  disabled={!currentSettings}
+                  disabled={!canEditSettings}
                 >
                   <option value="ja">🇯🇵 日本語</option>
                   <option value="en">🇺🇸 English</option>
@@ -449,19 +577,19 @@ function DashboardContent() {
                   value={roleOptions.filter((option) => currentSettings?.giveawayCreatorRoleIds.includes(option.value))}
                   onChange={(options) => updateCurrentSettings({ giveawayCreatorRoleIds: options.map((option) => option.value) })}
                   formatOptionLabel={(option) => <OptionLabel option={option} />}
-                  isDisabled={!currentSettings}
+                  isDisabled={!canEditSettings}
                 />
               </label>
 
               <label className="block text-sm">
-                <span className="mb-1 block text-slate-600">👀 ダッシュボード閲覧可能ロール</span>
+                <span className="mb-1 block text-slate-600">👀 ダッシュボード使用可能ロール</span>
                 <Select
                   isMulti
                   options={roleOptions}
-                  value={roleOptions.filter((option) => currentSettings?.dashboardViewRoleIds.includes(option.value))}
-                  onChange={(options) => updateCurrentSettings({ dashboardViewRoleIds: options.map((option) => option.value) })}
+                  value={roleOptions.filter((option) => currentSettings?.dashboardUsableRoleIds.includes(option.value))}
+                  onChange={(options) => updateCurrentSettings({ dashboardUsableRoleIds: options.map((option) => option.value) })}
                   formatOptionLabel={(option) => <OptionLabel option={option} />}
-                  isDisabled={!currentSettings}
+                  isDisabled={!canEditSettings}
                 />
               </label>
 
@@ -475,7 +603,7 @@ function DashboardContent() {
                     updateCurrentSettings({ giveawayChannelIds: options.map((option) => option.value) })
                   }
                   formatOptionLabel={(option) => <OptionLabel option={option} />}
-                  isDisabled={!currentSettings}
+                  isDisabled={!canEditSettings}
                 />
               </label>
 
@@ -486,26 +614,26 @@ function DashboardContent() {
                   onChange={(event) => updateCurrentSettings({ defaultClaimDeadline: event.target.value })}
                   className="w-full rounded-md border border-slate-300 px-3 py-2"
                   placeholder="例: 24h"
-                  disabled={!currentSettings}
+                  disabled={!canEditSettings}
                 />
               </label>
 
               <button
                 type="button"
                 onClick={() => saveSettingsMutation.mutate()}
-                disabled={saveSettingsMutation.isPending || !currentSettings || !activeGuildAccess?.isAdmin}
+                disabled={saveSettingsMutation.isPending || !canEditSettings}
                 className="rounded-md bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-500 disabled:opacity-50"
               >
                 設定を保存
               </button>
-              {!activeGuildAccess?.isAdmin ? (
-                <p className="text-xs text-slate-500">設定変更はサーバー管理者のみ可能です。</p>
+              {!activeGuildAccess?.isOwner ? (
+                <p className="text-xs text-slate-500">設定変更はサーバーオーナーのみ可能です。</p>
               ) : null}
             </div>
           </section>
         ) : null}
 
-        {activeSection === 'create' ? (
+        {activeSection === 'giveaway-create' ? (
           <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <h2 className="mb-4 text-base font-semibold">Giveaway作成</h2>
             <form
@@ -583,6 +711,10 @@ function DashboardContent() {
                     timeIntervals={5}
                     dateFormat="yyyy/MM/dd HH:mm"
                     placeholderText="自然言語 or yyyy/mm/dd"
+                    popperPlacement="bottom-start"
+                    popperClassName="dashboard-datepicker-popper"
+                    calendarClassName="dashboard-datepicker-calendar"
+                    wrapperClassName="w-full"
                     className="w-full rounded-md border border-slate-300 px-3 py-2"
                   />
                 </label>
@@ -625,23 +757,57 @@ function DashboardContent() {
           </section>
         ) : null}
 
-        {activeSection === 'active' ? (
+        {activeSection === 'giveaway-list' ? (
           <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="mb-4 text-base font-semibold">進行中Giveaway</h2>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-base font-semibold">Giveaway 一覧</h2>
+              <label className="text-sm">
+                <span className="mr-2 text-slate-600">フィルター</span>
+                <select
+                  value={giveawayFilter}
+                  onChange={(event) => setGiveawayFilter(event.target.value as GiveawayFilterKey)}
+                  className="rounded-md border border-slate-300 px-2 py-1"
+                >
+                  <option value="all">すべて</option>
+                  <option value="active">進行中</option>
+                  <option value="claim-open">請求受付中</option>
+                  <option value="claim-ended">請求終了</option>
+                  <option value="ended">終了</option>
+                  <option value="stopped">停止</option>
+                </select>
+              </label>
+            </div>
             <div className="space-y-3">
-              {(giveawaysQuery.data ?? []).map((giveaway) => {
+              {filteredGiveaways.map((giveaway) => {
                 const creator = memberMap.get(giveaway.createdBy);
                 const winners = giveaway.winners.map((winnerId) => memberMap.get(winnerId)).filter(Boolean);
                 const channel = channelMap.get(giveaway.channelId);
+                const claimState = getClaimState(giveaway);
+                const statusLabel =
+                  giveaway.status === 'active'
+                    ? '進行中'
+                    : giveaway.status === 'stopped'
+                      ? '停止'
+                      : claimState === 'open'
+                        ? '終了（請求受付中）'
+                        : claimState === 'closed'
+                          ? '終了（請求終了）'
+                          : '終了';
 
                 return (
                   <article key={giveaway.id} className="rounded-md border border-slate-200 p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h3 className="font-semibold">🎉 {giveaway.title}</h3>
-                      <span className="text-xs text-slate-500">終了予定: {formatDateTime(giveaway.endAt)}</span>
+                      <span className="text-xs text-slate-500">
+                        {giveaway.status === 'active' ? '終了予定' : '終了日時'}: {formatDateTime(giveaway.endAt)}
+                      </span>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-700">
-                      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1"># {channel ? `#${channel.name}` : '不明なチャンネル'}</span>
+                      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1">
+                        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px]">#</span>
+                        {channel ? stripLeadingMarker(channel.name) : '不明なチャンネル'}
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-2 py-1 text-indigo-700">{statusLabel}</span>
                       <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1">🏅 当選数 {giveaway.winnerCount}</span>
                     </div>
                     <div className="mt-2 text-sm">
@@ -676,7 +842,7 @@ function DashboardContent() {
                       <button
                         type="button"
                         onClick={() => endMutation.mutate(giveaway.id)}
-                        disabled={endMutation.isPending}
+                        disabled={endMutation.isPending || giveaway.status !== 'active'}
                         className="rounded-md bg-rose-600 px-3 py-1.5 text-xs text-white hover:bg-rose-500 disabled:opacity-50"
                       >
                         終了
@@ -684,7 +850,7 @@ function DashboardContent() {
                       <button
                         type="button"
                         onClick={() => rerollMutation.mutate(giveaway.id)}
-                        disabled={rerollMutation.isPending}
+                        disabled={rerollMutation.isPending || giveaway.status !== 'ended'}
                         className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-500 disabled:opacity-50"
                       >
                         再抽選
@@ -693,8 +859,8 @@ function DashboardContent() {
                   </article>
                 );
               })}
-              {giveawaysQuery.data && giveawaysQuery.data.length === 0 ? (
-                <p className="text-sm text-slate-500">進行中Giveawayはありません。</p>
+              {giveawaysQuery.data && filteredGiveaways.length === 0 ? (
+                <p className="text-sm text-slate-500">条件に一致するGiveawayはありません。</p>
               ) : null}
             </div>
           </section>

@@ -37,7 +37,7 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
       return {
         guildId,
         giveawayCreatorRoleIds: [],
-        dashboardViewRoleIds: [],
+        dashboardUsableRoleIds: [],
         language: 'en',
         giveawayChannelIds: [],
         defaultClaimDeadline: null
@@ -46,7 +46,8 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
     return {
       guildId: row.guild_id,
       giveawayCreatorRoleIds: row.giveaway_creator_role_ids ?? row.manager_role_ids ?? [],
-      dashboardViewRoleIds: row.dashboard_view_role_ids ?? [],
+      // Keep using existing DB column dashboard_view_role_ids while exposing renamed app-level field.
+      dashboardUsableRoleIds: row.dashboard_view_role_ids ?? [],
       language: row.language ?? 'en',
       giveawayChannelIds: row.giveaway_channel_ids ?? [],
       defaultClaimDeadline: row.default_claim_deadline
@@ -57,7 +58,7 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
 export async function setGuildSettings(guildId: string, settings: Partial<Omit<GuildSettings, 'guildId'>>): Promise<void> {
   await runDb(async () => {
     const giveawayCreatorRoleIds = settings.giveawayCreatorRoleIds ?? [];
-    const dashboardViewRoleIds = settings.dashboardViewRoleIds ?? [];
+    const dashboardUsableRoleIds = settings.dashboardUsableRoleIds ?? [];
     const language = settings.language ?? 'en';
     const giveawayChannelIds = settings.giveawayChannelIds ?? [];
     const defaultClaimDeadline = settings.defaultClaimDeadline ?? null;
@@ -66,7 +67,7 @@ export async function setGuildSettings(guildId: string, settings: Partial<Omit<G
       .values({
         guild_id: guildId,
         giveaway_creator_role_ids: giveawayCreatorRoleIds,
-        dashboard_view_role_ids: dashboardViewRoleIds,
+        dashboard_view_role_ids: dashboardUsableRoleIds,
         language,
         giveaway_channel_ids: giveawayChannelIds,
         default_claim_deadline: defaultClaimDeadline
@@ -74,7 +75,7 @@ export async function setGuildSettings(guildId: string, settings: Partial<Omit<G
       .onConflict((oc) =>
         oc.column('guild_id').doUpdateSet({
           giveaway_creator_role_ids: giveawayCreatorRoleIds,
-          dashboard_view_role_ids: dashboardViewRoleIds,
+          dashboard_view_role_ids: dashboardUsableRoleIds,
           language,
           giveaway_channel_ids: giveawayChannelIds,
           default_claim_deadline: defaultClaimDeadline

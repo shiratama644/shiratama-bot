@@ -27,7 +27,7 @@ export interface GiveawayEntry {
 export interface GuildSettings {
   guildId: string;
   giveawayCreatorRoleIds: string[];
-  dashboardViewRoleIds: string[];
+  dashboardUsableRoleIds: string[];
   language: string;
   giveawayChannelIds: string[];
   defaultClaimDeadline: string | null;
