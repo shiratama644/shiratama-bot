@@ -1,8 +1,8 @@
 import { Kysely, PostgresDialect, sql, type Selectable } from 'kysely';
 import { Pool } from 'pg';
-import type { Giveaway } from '../types.js';
-import { logger } from '../utils/logger.js';
-import { AppError } from '../errors.js';
+import type { Giveaway } from '../shared/types/common.js';
+import { logger } from '../shared/logger/index.js';
+import { AppError } from '../shared/errors/index.js';
 import type { Database, GiveawaysTable } from './schema.js';
 
 let pool: Pool | null = null;

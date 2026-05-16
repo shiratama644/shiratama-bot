@@ -1,4 +1,4 @@
-import type { GuildSettings } from '../types.js';
+import type { GuildSettings } from '../shared/types/common.js';
 import { getDb, runDb } from './client.js';
 
 export async function getGiveawayCreatorRoleIds(guildId: string): Promise<string[]> {

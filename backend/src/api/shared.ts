@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AppError, getErrorMessage, getErrorStatusCode } from '../errors.js';
+import { AppError, getErrorMessage, getErrorStatusCode } from '../shared/errors/index.js';
 
 export type AuthGuild = {
   id: string;

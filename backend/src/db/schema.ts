@@ -1,5 +1,5 @@
 import type { ColumnType } from 'kysely';
-import type { Giveaway } from '../types.js';
+import type { Giveaway } from '../shared/types/common.js';
 
 export interface GuildSettingsTable {
   guild_id: string;

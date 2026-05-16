@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import type { Client } from 'discord.js';
 import { getGuildSettings } from '../db/index.js';
-import { AppError } from '../errors.js';
+import { AppError } from '../shared/errors/index.js';
 import type { AuthGuild, AuthSession } from './shared.js';
 import { SESSION_TTL_MS } from './session.js';
 

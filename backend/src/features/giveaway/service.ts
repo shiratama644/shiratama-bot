@@ -20,14 +20,14 @@ import {
   toggleGiveawayEntry,
   updateGiveawayAutoRepeat,
   updateGiveawayStatus
-} from '../db/index.js';
-import { parseDeadline } from '../deadline.js';
-import { AppError } from '../errors.js';
-import { buttonClaimId, embedClaimFooterText } from '../ids.js';
-import type { Giveaway } from '../types.js';
-import { logger } from '../utils/logger.js';
-import { giveawayButtons, giveawayEmbed, parseDurationSeconds } from './embed.js';
-import { DEFAULT_LANGUAGE, t } from '../i18n.js';
+} from '../../db/index.js';
+import { parseDeadline } from '../../shared/utils/deadline.js';
+import { AppError } from '../../shared/errors/index.js';
+import { buttonClaimId, embedClaimFooterText } from '../../shared/constants/ids.js';
+import type { Giveaway } from '../../shared/types/common.js';
+import { logger } from '../../shared/logger/index.js';
+import { giveawayButtons, giveawayEmbed, parseDurationSeconds } from './embeds.js';
+import { DEFAULT_LANGUAGE, t } from '../../shared/i18n/index.js';
 
 function formatWinnerMentions(winners: string[]): string {
   return winners.map(id => userMention(id)).join(', ');

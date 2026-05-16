@@ -1,6 +1,6 @@
 import { ModalSubmitInteraction, Client } from 'discord.js';
-import { createGiveawayPost } from '../giveaway/index.js';
-import { getGuildSettings, setGuildSettings } from '../db/index.js';
+import { createGiveawayPost } from '../index.js';
+import { getGuildSettings, setGuildSettings } from '../../../db/index.js';
 import {
   FIELD_CREATE_AUTOREP,
   FIELD_CREATE_DESCRIPTION,
@@ -15,10 +15,10 @@ import {
   MODAL_GIVEAWAY_CREATE,
   MODAL_GIVEAWAY_SETTINGS,
   VALUE_AUTOREP_ENABLE
-} from '../ids.js';
-import { logger } from '../utils/logger.js';
-import { AppError } from '../errors.js';
-import { DEFAULT_LANGUAGE, t } from '../i18n.js';
+} from '../../../shared/constants/ids.js';
+import { logger } from '../../../shared/logger/index.js';
+import { AppError } from '../../../shared/errors/index.js';
+import { DEFAULT_LANGUAGE, t } from '../../../shared/i18n/index.js';
 
 export async function handleModalSubmit(client: Client, interaction: ModalSubmitInteraction) {
   if (interaction.customId === MODAL_GIVEAWAY_CREATE) {

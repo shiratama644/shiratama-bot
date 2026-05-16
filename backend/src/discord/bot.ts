@@ -4,11 +4,11 @@ import {
   REST,
   Routes
 } from 'discord.js';
-import { getDueGiveaways } from './db/index.js';
-import { endGiveaway } from './giveaway/index.js';
-import { handleInteraction } from './interactions/index.js';
-import { commands } from './commands/index.js';
-import { logger } from './utils/logger.js';
+import { getDueGiveaways } from '../db/index.js';
+import { endGiveaway } from '../features/giveaway/index.js';
+import { handleInteraction } from '../features/giveaway/interactions/index.js';
+import { commands } from '../features/giveaway/commands/index.js';
+import { logger } from '../shared/logger/index.js';
 
 export function buildClient(token: string, appId: string, guildId?: string): Client {
   const client = new Client({

@@ -1,7 +1,7 @@
 import type { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { getGuildSettings, setGuildSettings } from '../../db/index.js';
-import { AppError } from '../../errors.js';
+import { AppError } from '../../shared/errors/index.js';
 import { getSessionGuild, requireParam, respondError, settingsSchema } from '../shared.js';
 import { requireSession } from '../session.js';
 

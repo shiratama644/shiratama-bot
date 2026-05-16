@@ -12,7 +12,7 @@ import {
     TextInputStyle
 } from 'discord.js';
 import { Command } from './index.js';
-import { getGuildSettings } from '../db/index.js';
+import { getGuildSettings } from '../../../db/index.js';
 import { assertCanManageGiveaways } from './permissions.js';
 import {
     FIELD_SETTINGS_DEFCLAIM,
@@ -22,8 +22,8 @@ import {
     LANG_EN,
     LANG_JA,
     MODAL_GIVEAWAY_SETTINGS
-} from '../ids.js';
-import { t } from '../i18n.js';
+} from '../../../shared/constants/ids.js';
+import { t } from '../../../shared/i18n/index.js';
 
 export const gsettingsCommand: Command = {
     name: 'gsettings',
