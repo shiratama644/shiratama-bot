@@ -5,8 +5,8 @@ import {
 } from 'discord.js';
 import type { Hono } from 'hono';
 import { AppError } from '../../shared/errors/index.js';
-import { getSessionGuild, requireParam, respondError } from '../shared.js';
-import { requireSession } from '../session.js';
+import { getSessionGuild, requireSession } from '../../features/auth/index.js';
+import { requireParam, respondError } from '../utils/response.js';
 
 function toUserSummary(user: {
   id: string;

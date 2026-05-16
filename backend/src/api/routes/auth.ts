@@ -1,18 +1,19 @@
 import type { Client } from 'discord.js';
 import type { Hono } from 'hono';
 import { AppError, getErrorMessage } from '../../shared/errors/index.js';
-import { respondError } from '../shared.js';
-import { buildRedirectUri, createSessionFromOAuth } from '../oauth.js';
 import {
+  buildRedirectUri,
   cleanupExpiredSessions,
   clearCookieHeader,
   consumeOAuthState,
   createOAuthState,
+  createSessionFromOAuth,
   deleteSessionByToken,
   parseCookieToken,
   requireSession,
   storeSession
-} from '../session.js';
+} from '../../features/auth/index.js';
+import { respondError } from '../utils/response.js';
 
 export function registerAuthRoutes(app: Hono, client: Client): void {
   app.get('/api/auth/login', (c) => {

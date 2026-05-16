@@ -13,18 +13,18 @@ export interface Command {
   autocomplete?: (interaction: AutocompleteInteraction) => Promise<void>;
 }
 
-import { gcCommand } from './gc.js';
-import { gendCommand } from './gend.js';
-import { gstopCommand } from './gstop.js';
-import { gstartCommand } from './gstart.js';
-import { grerollCommand } from './greroll.js';
-import { gsettingsCommand } from './gsettings.js';
+import { createCommand } from './create.js';
+import { endCommand } from './end.js';
+import { stopCommand } from './stop.js';
+import { startCommand } from './start.js';
+import { rerollCommand } from './reroll.js';
+import { settingsCommand } from './settings.js';
 
 export const commands: Command[] = [
-  gcCommand,
-  gendCommand,
-  gstopCommand,
-  gstartCommand,
-  grerollCommand,
-  gsettingsCommand
+  createCommand,
+  endCommand,
+  stopCommand,
+  startCommand,
+  rerollCommand,
+  settingsCommand
 ];

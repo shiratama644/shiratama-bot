@@ -9,7 +9,7 @@ import {
     TextInputStyle
 } from 'discord.js';
 import { Command } from './index.js';
-import { assertCanManageGiveaways } from './permissions.js';
+import { assertCanManageGiveaways } from '../permissions.js';
 import { getGuildSettings } from '../../../db/index.js';
 import {
     FIELD_CREATE_AUTOREP,
@@ -24,7 +24,7 @@ import {
 } from '../../../shared/constants/ids.js';
 import { DEFAULT_LANGUAGE, t } from '../../../shared/i18n/index.js';
 
-export const gcCommand: Command = {
+export const createCommand: Command = {
     name: 'gc',
     description: 'Open giveaway creation form',
     execute: async (client: Client, interaction: ChatInputCommandInteraction) => {

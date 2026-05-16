@@ -3,9 +3,10 @@ import type { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { getGiveaway, getGuildGiveaways, getGuildSettings } from '../../db/index.js';
 import { AppError } from '../../shared/errors/index.js';
+import { getSessionGuild, requireSession } from '../../features/auth/index.js';
 import { createGiveawayPost, endGiveaway, rerollGiveaway } from '../../features/giveaway/index.js';
-import { createSchema, getSessionGuild, guildBodySchema, requireParam, respondError } from '../shared.js';
-import { requireSession } from '../session.js';
+import { createSchema, guildBodySchema } from '../schemas/giveaway.js';
+import { requireParam, respondError } from '../utils/response.js';
 
 export function registerGiveawayRoutes(app: Hono, client: Client): void {
   app.get('/api/giveaways/:guildId', async (c) => {

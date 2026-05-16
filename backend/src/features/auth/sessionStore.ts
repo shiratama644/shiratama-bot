@@ -1,10 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { AppError } from '../shared/errors/index.js';
-import type { AuthSession } from './shared.js';
-
-const DASHBOARD_COOKIE = 'applejp_dashboard_session';
-export const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
-const OAUTH_STATE_TTL_MS = 1000 * 60 * 10;
+import { AppError } from '../../shared/errors/index.js';
+import { OAUTH_STATE_TTL_MS, SESSION_TTL_MS } from './constants.js';
+import { createSessionCookieHeader, parseCookieToken } from './cookies.js';
+import type { AuthSession } from './types.js';
 
 const sessionStore = new Map<string, AuthSession>();
 const oauthStateStore = new Map<string, number>();
@@ -35,29 +33,6 @@ export function consumeOAuthState(state: string): boolean {
   return Boolean(expiresAt && expiresAt > Date.now());
 }
 
-function toCookieHeader(token: string, maxAgeSeconds: number): string {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-  return `${DASHBOARD_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure}`;
-}
-
-export function clearCookieHeader(): string {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-  return `${DASHBOARD_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`;
-}
-
-export function parseCookieToken(cookieHeader: string | undefined): string | null {
-  if (!cookieHeader) {
-    return null;
-  }
-  for (const chunk of cookieHeader.split(';')) {
-    const [name, value] = chunk.trim().split('=');
-    if (name === DASHBOARD_COOKIE && value) {
-      return value;
-    }
-  }
-  return null;
-}
-
 export function requireSession(c: { req: { header: (key: string) => string | undefined } }): AuthSession {
   cleanupExpiredSessions();
   const token = parseCookieToken(c.req.header('cookie'));
@@ -77,7 +52,7 @@ export function requireSession(c: { req: { header: (key: string) => string | und
 
 export function storeSession(session: AuthSession): string {
   sessionStore.set(session.token, session);
-  return toCookieHeader(session.token, Math.floor(SESSION_TTL_MS / 1000));
+  return createSessionCookieHeader(session.token, Math.floor(SESSION_TTL_MS / 1000));
 }
 
 export function deleteSessionByToken(token: string): void {

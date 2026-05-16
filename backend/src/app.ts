@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { serve } from '@hono/node-server';
 import { buildClient } from './discord/bot.js';
-import { createApiApp } from './api.js';
+import { createApiApp } from './api/index.js';
 import { initSchema } from './db/index.js';
 
 dotenv.config();

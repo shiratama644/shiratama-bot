@@ -2,11 +2,11 @@ import { ChatInputCommandInteraction, Client, AutocompleteInteraction } from 'di
 import { Command } from './index.js';
 import { endGiveaway } from '../index.js';
 import { getActiveGiveaways, getGuildSettings } from '../../../db/index.js';
-import { assertCanManageGiveaways } from './permissions.js';
+import { assertCanManageGiveaways } from '../permissions.js';
 import { ensureGiveawayInGuild } from '../index.js';
 import { t } from '../../../shared/i18n/index.js';
 
-export const gendCommand: Command = {
+export const endCommand: Command = {
   name: 'gend',
   description: 'Manually end the selected giveaway',
   options: [
