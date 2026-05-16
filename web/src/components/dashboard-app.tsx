@@ -13,6 +13,7 @@ import {
   useQueryClient
 } from '@tanstack/react-query';
 import {
+  type AuthSession,
   createGiveaway,
   endGiveaway,
   fetchAuthSession,
@@ -116,7 +117,7 @@ function OptionLabel({ option }: { option: SelectOption }) {
   );
 }
 
-function DashboardContent() {
+function DashboardContent({ initialSession }: { initialSession: AuthSession | null }) {
   const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const [giveawayMenuOpen, setGiveawayMenuOpen] = useState(true);
@@ -136,6 +137,7 @@ function DashboardContent() {
   const sessionQuery = useQuery({
     queryKey: ['auth-session'],
     queryFn: fetchAuthSession,
+    initialData: initialSession,
     retry: false
   });
 
@@ -882,7 +884,7 @@ function DashboardContent() {
   );
 }
 
-export function DashboardApp() {
+export function DashboardApp({ initialSession }: { initialSession: AuthSession | null }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -897,7 +899,7 @@ export function DashboardApp() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DashboardContent />
+      <DashboardContent initialSession={initialSession} />
     </QueryClientProvider>
   );
 }
