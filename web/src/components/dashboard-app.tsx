@@ -138,6 +138,7 @@ function DashboardContent({ initialSession }: { initialSession: AuthSession | nu
     queryKey: ['auth-session'],
     queryFn: fetchAuthSession,
     initialData: initialSession,
+    initialDataUpdatedAt: initialSession ? Date.now() : undefined,
     retry: false
   });
 
