@@ -1,5 +1,5 @@
-import { logger } from './utils/logger.js';
-import { LANG_EN, LANG_JA } from './ids.js';
+import { logger } from '../logger/index.js';
+import { LANG_EN, LANG_JA } from '../constants/ids.js';
 
 const enMessages = {
     giveawayCreateTitle: 'Giveaway Create',

@@ -10,7 +10,7 @@ import {
 } from 'discord.js';
 import { Command } from './index.js';
 import { assertCanManageGiveaways } from './permissions.js';
-import { getGuildSettings } from '../db/index.js';
+import { getGuildSettings } from '../../../db/index.js';
 import {
     FIELD_CREATE_AUTOREP,
     FIELD_CREATE_DESCRIPTION,
@@ -21,8 +21,8 @@ import {
     VALUE_AUTOREP_DISABLE,
     VALUE_AUTOREP_ENABLE,
     VALUE_DEFAULT_WINNERS
-} from '../ids.js';
-import { DEFAULT_LANGUAGE, t } from '../i18n.js';
+} from '../../../shared/constants/ids.js';
+import { DEFAULT_LANGUAGE, t } from '../../../shared/i18n/index.js';
 
 export const gcCommand: Command = {
     name: 'gc',

@@ -1,14 +1,14 @@
 import { ChatInputCommandInteraction, Client, AutocompleteInteraction } from 'discord.js';
 import { Command } from './index.js';
-import { stopGiveawayAutoRepeat } from '../giveaway/index.js';
-import { getActiveGiveaways, getGuildSettings } from '../db/index.js';
+import { endGiveaway } from '../index.js';
+import { getActiveGiveaways, getGuildSettings } from '../../../db/index.js';
 import { assertCanManageGiveaways } from './permissions.js';
-import { ensureGiveawayInGuild } from '../giveaway/index.js';
-import { t } from '../i18n.js';
+import { ensureGiveawayInGuild } from '../index.js';
+import { t } from '../../../shared/i18n/index.js';
 
-export const gstopCommand: Command = {
-  name: 'gstop',
-  description: 'Stop auto-repeat for the selected giveaway',
+export const gendCommand: Command = {
+  name: 'gend',
+  description: 'Manually end the selected giveaway',
   options: [
     {
       name: 'id',
@@ -25,9 +25,9 @@ export const gstopCommand: Command = {
     }
     const id = interaction.options.getString('id', true);
     await ensureGiveawayInGuild(id, interaction.guildId);
-    await stopGiveawayAutoRepeat(id);
+    await endGiveaway(client, id, true);
     const settings = await getGuildSettings(interaction.guildId);
-    await interaction.reply({ content: t(settings.language, 'giveawayAutoRepeatStopped', { id }), ephemeral: true });
+    await interaction.reply({ content: t(settings.language, 'giveawayEnded', { id }), ephemeral: true });
   },
   autocomplete: async (interaction: AutocompleteInteraction) => {
     if (!interaction.guildId) return;

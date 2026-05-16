@@ -1,6 +1,6 @@
 import { sql } from 'kysely';
-import type { Giveaway } from '../types.js';
-import { AppError } from '../errors.js';
+import type { Giveaway } from '../shared/types/common.js';
+import { AppError } from '../shared/errors/index.js';
 import { getDb, runDb } from './client.js';
 
 const ENTITY_GIVEAWAY = 'Giveaway';

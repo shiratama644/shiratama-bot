@@ -10,17 +10,17 @@ import {
 import {
   ensureGiveawayIsActive,
   refreshGiveawayMessage
-} from '../giveaway/index.js';
-import { getGuildSettings, isUserEntered, addGiveawayEntry, removeGiveawayEntry } from '../db/index.js';
+} from '../index.js';
+import { getGuildSettings, isUserEntered, addGiveawayEntry, removeGiveawayEntry } from '../../../db/index.js';
 import {
   BUTTON_CLAIM_PREFIX,
   BUTTON_COPY_PREFIX,
   BUTTON_LEAVE_PREFIX,
   BUTTON_TOGGLE_PREFIX,
   buttonLeaveId
-} from '../ids.js';
-import { logger } from '../utils/logger.js';
-import { DEFAULT_LANGUAGE, t } from '../i18n.js';
+} from '../../../shared/constants/ids.js';
+import { logger } from '../../../shared/logger/index.js';
+import { DEFAULT_LANGUAGE, t } from '../../../shared/i18n/index.js';
 
 export async function handleButton(client: Client, interaction: ButtonInteraction) {
   const settings = interaction.guildId ? await getGuildSettings(interaction.guildId) : null;

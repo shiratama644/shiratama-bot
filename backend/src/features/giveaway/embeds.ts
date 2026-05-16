@@ -5,9 +5,9 @@ import {
   Colors,
   EmbedBuilder
 } from 'discord.js';
-import { buttonCopyId, buttonToggleId } from '../ids.js';
-import type { GiveawayStatus } from '../types.js';
-import { DEFAULT_LANGUAGE, t } from '../i18n.js';
+import { buttonCopyId, buttonToggleId } from '../../shared/constants/ids.js';
+import type { GiveawayStatus } from '../../shared/types/common.js';
+import { DEFAULT_LANGUAGE, t } from '../../shared/i18n/index.js';
 
 export function parseDurationSeconds(duration: string): number {
   const match = duration.trim().match(/^(\d+)(m|h|d)$/i);

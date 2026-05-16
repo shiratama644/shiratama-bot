@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { AppError } from '../errors.js';
+import { AppError } from '../shared/errors/index.js';
 import type { AuthSession } from './shared.js';
 
 const DASHBOARD_COOKIE = 'applejp_dashboard_session';

@@ -1,4 +1,4 @@
-import type { Giveaway } from '../types.js';
+import type { Giveaway } from '../shared/types/common.js';
 import { getDb, runDb, assertRowsAffected, mapGiveaway } from './client.js';
 
 const ENTITY_GIVEAWAY = 'Giveaway';

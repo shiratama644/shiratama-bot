@@ -4,7 +4,7 @@ import {
   type Guild
 } from 'discord.js';
 import type { Hono } from 'hono';
-import { AppError } from '../../errors.js';
+import { AppError } from '../../shared/errors/index.js';
 import { getSessionGuild, requireParam, respondError } from '../shared.js';
 import { requireSession } from '../session.js';
 

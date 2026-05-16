@@ -2,7 +2,7 @@ import type { Client } from 'discord.js';
 import type { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { getGiveaway, getGuildGiveaways, getGuildSettings } from '../../db/index.js';
-import { AppError } from '../../errors.js';
+import { AppError } from '../../shared/errors/index.js';
 import { createGiveawayPost, endGiveaway, rerollGiveaway } from '../../giveaway/index.js';
 import { createSchema, getSessionGuild, guildBodySchema, requireParam, respondError } from '../shared.js';
 import { requireSession } from '../session.js';

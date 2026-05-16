@@ -2,10 +2,10 @@ import { Interaction, Client, EmbedBuilder, Colors } from 'discord.js';
 import { handleModalSubmit } from './modalSubmit.js';
 import { handleButton } from './button.js';
 import { commands } from '../commands/index.js';
-import { logger } from '../utils/logger.js';
-import { getErrorMessage } from '../errors.js';
-import { getGuildSettings } from '../db/index.js';
-import { DEFAULT_LANGUAGE, t } from '../i18n.js';
+import { logger } from '../../../shared/logger/index.js';
+import { getErrorMessage } from '../../../shared/errors/index.js';
+import { getGuildSettings } from '../../../db/index.js';
+import { DEFAULT_LANGUAGE, t } from '../../../shared/i18n/index.js';
 
 export async function handleInteraction(client: Client, interaction: Interaction) {
   try {

@@ -1,6 +1,6 @@
 import type { Client } from 'discord.js';
 import type { Hono } from 'hono';
-import { AppError, getErrorMessage } from '../../errors.js';
+import { AppError, getErrorMessage } from '../../shared/errors/index.js';
 import { respondError } from '../shared.js';
 import { buildRedirectUri, createSessionFromOAuth } from '../oauth.js';
 import {
