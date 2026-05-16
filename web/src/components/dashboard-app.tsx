@@ -29,7 +29,6 @@ type SelectOption = {
   value: string;
   label: string;
   iconType: 'channel' | 'role';
-  iconUrl?: string | null;
 };
 
 type SectionKey = 'settings' | 'giveaway-create' | 'giveaway-list';
@@ -95,7 +94,7 @@ function getClaimState(giveaway: {
   endAt: string;
   claimDeadline: string | null;
 }): 'none' | 'open' | 'closed' {
-  if (giveaway.status !== 'ended' || !giveaway.claimDeadline || giveaway.claimDeadline === 'def') {
+  if (giveaway.status !== 'ended' || !giveaway.claimDeadline) {
     return 'none';
   }
   const claimDurationMs = parseIntervalMs(giveaway.claimDeadline);
@@ -803,7 +802,10 @@ function DashboardContent() {
                       </span>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-700">
-                      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1"># {channel ? stripLeadingMarker(channel.name) : '不明なチャンネル'}</span>
+                      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1">
+                        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px]">#</span>
+                        {channel ? stripLeadingMarker(channel.name) : '不明なチャンネル'}
+                      </span>
                       <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-2 py-1 text-indigo-700">{statusLabel}</span>
                       <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1">🏅 当選数 {giveaway.winnerCount}</span>
                     </div>

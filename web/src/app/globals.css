@@ -13,19 +13,10 @@ body {
 
 .dashboard-datepicker-popper {
   max-width: calc(100vw - 1rem);
+  z-index: 30;
 }
 
 .dashboard-datepicker-calendar {
   max-width: calc(100vw - 1rem);
-}
-
-@media (max-width: 640px) {
-  .dashboard-datepicker-popper {
-    inset-inline-start: 0 !important;
-    transform: translate3d(0, 0, 0) !important;
-  }
-
-  .dashboard-datepicker-calendar {
-    width: min(22rem, calc(100vw - 1rem));
-  }
+  width: min(22rem, calc(100vw - 1rem));
 }
