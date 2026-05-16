@@ -4,6 +4,7 @@ import { ensureGiveawayInGuild, rerollGiveaway } from '../index.js';
 import { getEndedGiveaways, getGuildSettings } from '../../../db/index.js';
 import { assertCanManageGiveaways } from '../permissions.js';
 import { t } from '../../../shared/i18n/index.js';
+import { respondGiveawayAutocomplete } from './autocomplete.js';
 
 export const rerollCommand: Command = {
   name: 'greroll',
@@ -31,10 +32,6 @@ export const rerollCommand: Command = {
   autocomplete: async (interaction: AutocompleteInteraction) => {
     if (!interaction.guildId) return;
     const ended = await getEndedGiveaways(interaction.guildId);
-    const focusedValue = interaction.options.getFocused();
-    const filtered = ended.filter(g => g.title.includes(focusedValue) || g.id.includes(focusedValue));
-    await interaction.respond(
-      filtered.slice(0, 25).map(g => ({ name: `${g.title} (${g.id})`, value: g.id }))
-    );
+    await respondGiveawayAutocomplete(interaction, ended);
   }
 };
