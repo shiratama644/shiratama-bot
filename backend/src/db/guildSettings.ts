@@ -46,6 +46,7 @@ export async function getGuildSettings(guildId: string): Promise<GuildSettings> 
     return {
       guildId: row.guild_id,
       giveawayCreatorRoleIds: row.giveaway_creator_role_ids ?? row.manager_role_ids ?? [],
+      // Keep using existing DB column dashboard_view_role_ids while exposing renamed app-level field.
       dashboardUsableRoleIds: row.dashboard_view_role_ids ?? [],
       language: row.language ?? 'en',
       giveawayChannelIds: row.giveaway_channel_ids ?? [],

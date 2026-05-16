@@ -4,7 +4,6 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import {
   ChannelType,
-  PermissionsBitField,
   type Client,
   type Guild
 } from 'discord.js';
@@ -60,6 +59,7 @@ const settingsSchema = z.object({
   language: z.enum(['en', 'ja']).optional(),
   giveawayCreatorRoleIds: z.array(z.string().min(1)).optional(),
   dashboardUsableRoleIds: z.array(z.string().min(1)).optional(),
+  // deprecated: kept for backward compatibility with older web clients
   dashboardViewRoleIds: z.array(z.string().min(1)).optional(),
   giveawayChannelIds: z.array(z.string().min(1)).optional(),
   defaultClaimDeadline: z.preprocess((value) => {
@@ -220,7 +220,6 @@ async function createSessionFromOAuth(client: Client, accessToken: string): Prom
     if (!member) {
       continue;
     }
-    const permissionBits = BigInt(oauthGuild.permissions);
     const hasDashboardRole = settings.dashboardUsableRoleIds.some((roleId) => member.roles.cache.has(roleId));
     const hasCreatorRole =
       settings.giveawayCreatorRoleIds.length === 0 ||
@@ -231,10 +230,7 @@ async function createSessionFromOAuth(client: Client, accessToken: string): Prom
       name: guild.name,
       iconUrl: guild.iconURL({ size: 64, extension: 'png' }),
       canUseDashboard: oauthGuild.owner || hasDashboardRole,
-      canCreateGiveaway:
-        oauthGuild.owner ||
-        (permissionBits & PermissionsBitField.Flags.Administrator) !== 0n ||
-        hasCreatorRole,
+      canCreateGiveaway: oauthGuild.owner || hasCreatorRole,
       isOwner: oauthGuild.owner
     });
   }
@@ -422,6 +418,7 @@ export function createApiApp(client: Client) {
       }
       const body = c.req.valid('json');
       const current = await getGuildSettings(guildId);
+      // Backward compatibility for older clients that still send dashboardViewRoleIds.
       const dashboardUsableRoleIds = body.dashboardUsableRoleIds ?? body.dashboardViewRoleIds;
 
       await setGuildSettings(guildId, {
