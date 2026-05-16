@@ -3,7 +3,7 @@ import type { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { getGiveaway, getGuildGiveaways, getGuildSettings } from '../../db/index.js';
 import { AppError } from '../../shared/errors/index.js';
-import { createGiveawayPost, endGiveaway, rerollGiveaway } from '../../giveaway/index.js';
+import { createGiveawayPost, endGiveaway, rerollGiveaway } from '../../features/giveaway/index.js';
 import { createSchema, getSessionGuild, guildBodySchema, requireParam, respondError } from '../shared.js';
 import { requireSession } from '../session.js';
 

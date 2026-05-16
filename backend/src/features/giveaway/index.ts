@@ -1,4 +1,4 @@
-export { giveawayButtons, giveawayButton, giveawayEmbed, parseDurationSeconds } from './embed.js';
+export { giveawayButtons, giveawayButton, giveawayEmbed, parseDurationSeconds } from './embeds.js';
 export {
   toggleEntryAndBuildMessage,
   getGiveawayOrThrow,

@@ -20,7 +20,7 @@ import {
   toggleGiveawayEntry,
   updateGiveawayAutoRepeat,
   updateGiveawayStatus
-} from '../db/index.js';
+} from '../../db/index.js';
 import { parseDeadline } from '../../shared/utils/deadline.js';
 import { AppError } from '../../shared/errors/index.js';
 import { buttonClaimId, embedClaimFooterText } from '../../shared/constants/ids.js';
