@@ -4,9 +4,8 @@ export type ChannelSummary = { id: string; name: string };
 export type MemberSummary = { id: string; name: string; avatarUrl: string };
 
 export type AuthGuild = GuildSummary & {
-  canViewDashboard: boolean;
+  canUseDashboard: boolean;
   canCreateGiveaway: boolean;
-  isAdmin: boolean;
   isOwner: boolean;
 };
 
@@ -25,7 +24,7 @@ export type GuildOptions = {
 export type GuildSettings = {
   guildId: string;
   giveawayCreatorRoleIds: string[];
-  dashboardViewRoleIds: string[];
+  dashboardUsableRoleIds: string[];
   language: string;
   giveawayChannelIds: string[];
   defaultClaimDeadline: string | null;
@@ -104,7 +103,7 @@ export async function updateSettings(
   input: {
     language: 'en' | 'ja';
     giveawayCreatorRoleIds: string[];
-    dashboardViewRoleIds: string[];
+    dashboardUsableRoleIds: string[];
     giveawayChannelIds: string[];
     defaultClaimDeadline: string | null;
   }

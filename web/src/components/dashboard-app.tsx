@@ -38,7 +38,7 @@ type SettingsDraft = {
   guildId: string;
   language: 'en' | 'ja';
   giveawayCreatorRoleIds: string[];
-  dashboardViewRoleIds: string[];
+  dashboardUsableRoleIds: string[];
   giveawayChannelIds: string[];
   defaultClaimDeadline: string;
 };
@@ -198,7 +198,7 @@ function DashboardContent() {
       guildId: activeGuildId,
       language: settingsQuery.data.language === 'ja' ? 'ja' : 'en',
       giveawayCreatorRoleIds: settingsQuery.data.giveawayCreatorRoleIds,
-      dashboardViewRoleIds: settingsQuery.data.dashboardViewRoleIds,
+      dashboardUsableRoleIds: settingsQuery.data.dashboardUsableRoleIds,
       giveawayChannelIds: settingsQuery.data.giveawayChannelIds,
       defaultClaimDeadline: settingsQuery.data.defaultClaimDeadline ?? ''
     };
@@ -221,6 +221,7 @@ function DashboardContent() {
     () => guilds?.find((guild) => guild.id === activeGuildId) ?? null,
     [guilds, activeGuildId]
   );
+  const canEditSettings = Boolean(currentSettings && activeGuildAccess?.isOwner);
 
   const filteredGiveaways = useMemo(() => {
     const giveaways = giveawaysQuery.data ?? [];
@@ -258,7 +259,7 @@ function DashboardContent() {
       return updateSettings(activeGuildId, {
         language: currentSettings.language,
         giveawayCreatorRoleIds: currentSettings.giveawayCreatorRoleIds,
-        dashboardViewRoleIds: currentSettings.dashboardViewRoleIds,
+        dashboardUsableRoleIds: currentSettings.dashboardUsableRoleIds,
         giveawayChannelIds: currentSettings.giveawayChannelIds,
         defaultClaimDeadline: currentSettings.defaultClaimDeadline.trim()
           ? currentSettings.defaultClaimDeadline.trim()
@@ -363,7 +364,7 @@ function DashboardContent() {
         <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-lg font-semibold">AppleJP Bot Dashboard</h1>
           <p className="mt-2 text-sm text-slate-600">
-            Discord OAuth2でログインすると、サーバー管理者またはダッシュボード閲覧可能ロールのユーザーが利用できます。
+            Discord OAuth2でログインすると、このBotが参加しているサーバー一覧を確認できます。
           </p>
           <button
             type="button"
@@ -388,20 +389,20 @@ function DashboardContent() {
         <div className="mx-auto w-full max-w-2xl rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <h1 className="text-lg font-semibold">サーバー選択</h1>
           <p className="mt-2 text-sm text-slate-600">
-            サーバーオーナーのサーバーのみ選択できます。選択後にダッシュボードへ移動します。
+            すべてのサーバー一覧を表示します。サーバーオーナーまたはダッシュボード使用可能ロールがあるサーバーのみ選択できます。
           </p>
           <div className="mt-4 space-y-2">
             {(guilds ?? []).map((guild) => (
               <button
                 type="button"
                 key={guild.id}
-                disabled={!guild.isOwner}
+                disabled={!guild.canUseDashboard}
                 onClick={() => {
                   setSelectedGuildId(guild.id);
                   setSettingsDraft(null);
                 }}
                 className={`flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-sm ${
-                  guild.isOwner
+                  guild.canUseDashboard
                     ? 'border-slate-300 hover:bg-slate-50'
                     : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
                 }`}
@@ -413,7 +414,7 @@ function DashboardContent() {
                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs">🏠</span>
                 )}
                 <span className="truncate">{guild.name}</span>
-                {!guild.isOwner ? <span className="ml-auto text-xs">オーナーのみ</span> : null}
+                {!guild.canUseDashboard ? <span className="ml-auto text-xs">権限なし</span> : null}
               </button>
             ))}
           </div>
@@ -519,18 +520,18 @@ function DashboardContent() {
               type="button"
               key={guild.id}
               onClick={() => {
-                if (!guild.isOwner) {
+                if (!guild.canUseDashboard) {
                   return;
                 }
                 setSelectedGuildId(guild.id);
                 setSettingsDraft(null);
                 setMenuOpen(false);
               }}
-              disabled={!guild.isOwner}
+              disabled={!guild.canUseDashboard}
               className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm ${
                 guild.id === activeGuildId
                   ? 'bg-indigo-100 text-indigo-800'
-                  : guild.isOwner
+                  : guild.canUseDashboard
                     ? 'hover:bg-slate-100'
                     : 'cursor-not-allowed text-slate-400'
               }`}
@@ -542,7 +543,7 @@ function DashboardContent() {
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-xs">🏠</span>
               )}
               <span className="truncate">{guild.name}</span>
-              {!guild.isOwner ? <span className="ml-auto text-[10px]">オーナーのみ</span> : null}
+              {!guild.canUseDashboard ? <span className="ml-auto text-[10px]">権限なし</span> : null}
             </button>
           ))}
         </div>
@@ -561,7 +562,7 @@ function DashboardContent() {
                     updateCurrentSettings({ language: event.target.value === 'ja' ? 'ja' : 'en' })
                   }
                   className="w-full rounded-md border border-slate-300 px-3 py-2"
-                  disabled={!currentSettings}
+                  disabled={!canEditSettings}
                 >
                   <option value="ja">🇯🇵 日本語</option>
                   <option value="en">🇺🇸 English</option>
@@ -576,19 +577,19 @@ function DashboardContent() {
                   value={roleOptions.filter((option) => currentSettings?.giveawayCreatorRoleIds.includes(option.value))}
                   onChange={(options) => updateCurrentSettings({ giveawayCreatorRoleIds: options.map((option) => option.value) })}
                   formatOptionLabel={(option) => <OptionLabel option={option} />}
-                  isDisabled={!currentSettings}
+                  isDisabled={!canEditSettings}
                 />
               </label>
 
               <label className="block text-sm">
-                <span className="mb-1 block text-slate-600">👀 ダッシュボード閲覧可能ロール</span>
+                <span className="mb-1 block text-slate-600">👀 ダッシュボード使用可能ロール</span>
                 <Select
                   isMulti
                   options={roleOptions}
-                  value={roleOptions.filter((option) => currentSettings?.dashboardViewRoleIds.includes(option.value))}
-                  onChange={(options) => updateCurrentSettings({ dashboardViewRoleIds: options.map((option) => option.value) })}
+                  value={roleOptions.filter((option) => currentSettings?.dashboardUsableRoleIds.includes(option.value))}
+                  onChange={(options) => updateCurrentSettings({ dashboardUsableRoleIds: options.map((option) => option.value) })}
                   formatOptionLabel={(option) => <OptionLabel option={option} />}
-                  isDisabled={!currentSettings}
+                  isDisabled={!canEditSettings}
                 />
               </label>
 
@@ -602,7 +603,7 @@ function DashboardContent() {
                     updateCurrentSettings({ giveawayChannelIds: options.map((option) => option.value) })
                   }
                   formatOptionLabel={(option) => <OptionLabel option={option} />}
-                  isDisabled={!currentSettings}
+                  isDisabled={!canEditSettings}
                 />
               </label>
 
@@ -613,20 +614,20 @@ function DashboardContent() {
                   onChange={(event) => updateCurrentSettings({ defaultClaimDeadline: event.target.value })}
                   className="w-full rounded-md border border-slate-300 px-3 py-2"
                   placeholder="例: 24h"
-                  disabled={!currentSettings}
+                  disabled={!canEditSettings}
                 />
               </label>
 
               <button
                 type="button"
                 onClick={() => saveSettingsMutation.mutate()}
-                disabled={saveSettingsMutation.isPending || !currentSettings || !activeGuildAccess?.isAdmin}
+                disabled={saveSettingsMutation.isPending || !canEditSettings}
                 className="rounded-md bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-500 disabled:opacity-50"
               >
                 設定を保存
               </button>
-              {!activeGuildAccess?.isAdmin ? (
-                <p className="text-xs text-slate-500">設定変更はサーバー管理者のみ可能です。</p>
+              {!activeGuildAccess?.isOwner ? (
+                <p className="text-xs text-slate-500">設定変更はサーバーオーナーのみ可能です。</p>
               ) : null}
             </div>
           </section>
