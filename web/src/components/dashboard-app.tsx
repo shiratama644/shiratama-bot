@@ -117,7 +117,13 @@ function OptionLabel({ option }: { option: SelectOption }) {
   );
 }
 
-function DashboardContent({ initialSession }: { initialSession: AuthSession | null }) {
+function DashboardContent({
+  initialSession,
+  initialSessionFetchedAt
+}: {
+  initialSession: AuthSession | null;
+  initialSessionFetchedAt: number;
+}) {
   const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const [giveawayMenuOpen, setGiveawayMenuOpen] = useState(true);
@@ -138,7 +144,7 @@ function DashboardContent({ initialSession }: { initialSession: AuthSession | nu
     queryKey: ['auth-session'],
     queryFn: fetchAuthSession,
     initialData: initialSession,
-    initialDataUpdatedAt: initialSession ? Date.now() : undefined,
+    initialDataUpdatedAt: initialSession ? initialSessionFetchedAt : undefined,
     retry: false
   });
 
@@ -885,7 +891,13 @@ function DashboardContent({ initialSession }: { initialSession: AuthSession | nu
   );
 }
 
-export function DashboardApp({ initialSession }: { initialSession: AuthSession | null }) {
+export function DashboardApp({
+  initialSession,
+  initialSessionFetchedAt
+}: {
+  initialSession: AuthSession | null;
+  initialSessionFetchedAt: number;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -900,7 +912,10 @@ export function DashboardApp({ initialSession }: { initialSession: AuthSession |
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DashboardContent initialSession={initialSession} />
+      <DashboardContent
+        initialSession={initialSession}
+        initialSessionFetchedAt={initialSessionFetchedAt}
+      />
     </QueryClientProvider>
   );
 }

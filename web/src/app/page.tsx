@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
-async function fetchInitialSession(): Promise<AuthSession | null> {
+async function fetchInitialSession(): Promise<{ initialSession: AuthSession | null; fetchedAt: number }> {
   try {
     const cookieStore = await cookies();
     const cookieHeader = cookieStore.toString();
@@ -12,20 +12,24 @@ async function fetchInitialSession(): Promise<AuthSession | null> {
       headers: {
         ...(cookieHeader ? { cookie: cookieHeader } : {})
       },
-      cache: 'no-store'
+      cache: 'no-store',
+      signal: AbortSignal.timeout(5_000)
     });
 
     if (!response.ok) {
-      return null;
+      return { initialSession: null, fetchedAt: Date.now() };
     }
 
-    return (await response.json()) as AuthSession;
+    return {
+      initialSession: (await response.json()) as AuthSession,
+      fetchedAt: Date.now()
+    };
   } catch {
-    return null;
+    return { initialSession: null, fetchedAt: Date.now() };
   }
 }
 
 export default async function Home() {
-  const initialSession = await fetchInitialSession();
-  return <DashboardApp initialSession={initialSession} />;
+  const { initialSession, fetchedAt } = await fetchInitialSession();
+  return <DashboardApp initialSession={initialSession} initialSessionFetchedAt={fetchedAt} />;
 }
