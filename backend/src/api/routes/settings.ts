@@ -11,7 +11,7 @@ export function registerSettingsRoutes(app: Hono): void {
   app.get('/api/settings/:guildId', async (c) => {
     try {
       const guildId = requireParam(c.req.param('guildId'), 'guildId');
-      const session = requireSession(c);
+      const session = await requireSession(c);
       getSessionGuild(session, guildId);
       const settings = await getGuildSettings(guildId);
       return c.json({ settings });
@@ -23,7 +23,7 @@ export function registerSettingsRoutes(app: Hono): void {
   app.put('/api/settings/:guildId', zValidator('json', settingsSchema), async (c) => {
     try {
       const guildId = requireParam(c.req.param('guildId'), 'guildId');
-      const session = requireSession(c);
+      const session = await requireSession(c);
       const guild = getSessionGuild(session, guildId);
       if (!guild.isOwner) {
         throw new AppError('Only server owners can update settings.', 403);

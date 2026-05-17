@@ -1,64 +1,16 @@
 import {
   ChannelType,
-  GatewayIntentBits,
-  type Client,
-  type Guild
+  type Client
 } from 'discord.js';
 import type { Hono } from 'hono';
 import { AppError } from '../../shared/errors/index.js';
 import { getSessionGuild, requireSession } from '../../features/auth/index.js';
 import { requireParam, respondError } from '../utils/response.js';
 
-function toUserSummary(user: {
-  id: string;
-  username: string;
-  globalName: string | null;
-  displayAvatarURL: (options?: { size?: number; extension?: 'png' | 'webp' | 'jpg' }) => string;
-}): {
-  id: string;
-  name: string;
-  avatarUrl: string;
-} {
-  return {
-    id: user.id,
-    name: user.globalName ?? user.username,
-    avatarUrl: user.displayAvatarURL({ size: 64, extension: 'png' })
-  };
-}
-
-async function getGuildMembers(guild: Guild, canFetchAllMembers: boolean): Promise<Array<{ id: string; name: string; avatarUrl: string }>> {
-  const dedup = new Map<string, { id: string; name: string; avatarUrl: string }>();
-  const add = (entry: { id: string; name: string; avatarUrl: string }) => {
-    dedup.set(entry.id, entry);
-  };
-
-  const owner = await guild.fetchOwner().catch(() => null);
-  if (owner) {
-    add(toUserSummary(owner.user));
-  }
-
-  if (!canFetchAllMembers) {
-    return [...dedup.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  try {
-    const members = await guild.members.fetch({ limit: 200 });
-    for (const member of members.values()) {
-      add(toUserSummary(member.user));
-    }
-  } catch {
-    return [...dedup.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  return [...dedup.values()].sort((a, b) => a.name.localeCompare(b.name));
-}
-
 export function registerGuildRoutes(app: Hono, client: Client): void {
-  const canFetchAllMembers = client.options.intents.has(GatewayIntentBits.GuildMembers);
-
-  app.get('/api/guilds', (c) => {
+  app.get('/api/guilds', async (c) => {
     try {
-      const session = requireSession(c);
+      const session = await requireSession(c);
       return c.json({
         guilds: session.guilds.map((guild) => ({
           id: guild.id,
@@ -74,7 +26,7 @@ export function registerGuildRoutes(app: Hono, client: Client): void {
   app.get('/api/guilds/:guildId/options', async (c) => {
     try {
       const guildId = requireParam(c.req.param('guildId'), 'guildId');
-      const session = requireSession(c);
+      const session = await requireSession(c);
       getSessionGuild(session, guildId);
       const guild = await client.guilds.fetch(guildId).catch(() => null);
       if (!guild) {
@@ -94,9 +46,6 @@ export function registerGuildRoutes(app: Hono, client: Client): void {
         .filter((channel) => channel.type === ChannelType.GuildText)
         .map((channel) => ({ id: channel.id, name: channel.name }))
         .sort((a, b) => a.name.localeCompare(b.name));
-
-      const members = await getGuildMembers(guild, canFetchAllMembers);
-
       return c.json({
         guild: {
           id: guild.id,
@@ -104,8 +53,7 @@ export function registerGuildRoutes(app: Hono, client: Client): void {
           iconUrl: guild.iconURL({ size: 64, extension: 'png' })
         },
         roles,
-        channels,
-        members
+        channels
       });
     } catch (error) {
       return respondError(c, error);

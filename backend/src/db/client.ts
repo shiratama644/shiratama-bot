@@ -124,20 +124,11 @@ export async function initSchema(): Promise<void> {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
-      CREATE TABLE IF NOT EXISTS idempotency_keys (
-        key TEXT PRIMARY KEY,
-        actor_id TEXT NOT NULL,
-        guild_id TEXT NOT NULL,
-        giveaway_id TEXT REFERENCES giveaways(id) ON DELETE SET NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-
       CREATE INDEX IF NOT EXISTS idx_giveaways_active_end_at ON giveaways(status, end_at);
       CREATE INDEX IF NOT EXISTS idx_giveaways_guild_status_created_at ON giveaways(guild_id, status, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_giveaway_entries_giveaway_id ON giveaway_entries(giveaway_id);
       CREATE INDEX IF NOT EXISTS idx_audit_logs_guild_created_at ON audit_logs(guild_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_audit_logs_action_created_at ON audit_logs(action, created_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_idempotency_keys_actor_created_at ON idempotency_keys(actor_id, created_at DESC);
     `).execute(getDb());
 
     // Migrate existing tables by adding columns that may not exist yet

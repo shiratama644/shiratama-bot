@@ -1,10 +1,35 @@
 import { DASHBOARD_COOKIE } from './constants.js';
 
+function getConfiguredUrlProtocols(): string[] {
+  return [
+    process.env.APP_BASE_URL,
+    process.env.WEB_BASE_URL,
+    process.env.CORS_ORIGIN
+  ]
+    .flatMap((value) => {
+      if (!value) {
+        return [];
+      }
+      try {
+        return [new URL(value).protocol];
+      } catch {
+        return [];
+      }
+    });
+}
+
 function shouldUseSecureCookie(): boolean {
   if (process.env.COOKIE_SECURE === 'true') {
     return true;
   }
   if (process.env.COOKIE_SECURE === 'false') {
+    return false;
+  }
+  const protocols = getConfiguredUrlProtocols();
+  if (protocols.includes('https:')) {
+    return true;
+  }
+  if (protocols.length > 0 && protocols.every((protocol) => protocol === 'http:')) {
     return false;
   }
   return process.env.NODE_ENV === 'production';
