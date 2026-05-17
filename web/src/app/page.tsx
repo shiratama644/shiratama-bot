@@ -51,9 +51,12 @@ async function fetchInitialSession(): Promise<{ initialSession: AuthSession | nu
   try {
     const cookieStore = await cookies();
     const cookieHeader = cookieStore.toString();
+    if (!cookieHeader) {
+      return { initialSession: null, fetchedAt: Date.now() };
+    }
     const response = await fetch(`${apiBaseUrl}/api/auth/session`, {
       headers: {
-        ...(cookieHeader ? { cookie: cookieHeader } : {})
+        cookie: cookieHeader
       },
       cache: 'no-store',
       signal: AbortSignal.timeout(5_000)
