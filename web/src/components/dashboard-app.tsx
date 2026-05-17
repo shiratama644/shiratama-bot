@@ -5,6 +5,9 @@ import Select from 'react-select';
 import DatePicker from 'react-datepicker';
 import * as chrono from 'chrono-node';
 import { format } from 'date-fns';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, useWatch } from 'react-hook-form';
+import { z } from 'zod';
 import {
   QueryClient,
   QueryClientProvider,
@@ -53,6 +56,26 @@ const INTERVAL_UNIT_MS: Record<string, number> = {
   m: 60 * 1000,
   s: 1000
 };
+
+const createGiveawayFormSchema = z
+  .object({
+    title: z.string().trim().min(1, 'タイトルを入力してください。'),
+    description: z.string(),
+    deadlineText: z.string(),
+    winnerCount: z.number().int().min(1, '当選人数は1以上を入力してください。'),
+    autoRepeat: z.boolean()
+  })
+  .superRefine((value, context) => {
+    if (value.autoRepeat && !parseIntervalMs(value.deadlineText)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['deadlineText'],
+        message: '間隔は 1h / 20m / 1w2d3h の形式で入力してください。'
+      });
+    }
+  });
+
+type CreateGiveawayFormValues = z.infer<typeof createGiveawayFormSchema>;
 
 function formatDateTime(value: string) {
   const date = new Date(value);
@@ -133,13 +156,26 @@ function DashboardContent({
   const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
   const [settingsDraft, setSettingsDraft] = useState<SettingsDraft | null>(null);
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [deadlineText, setDeadlineText] = useState('');
   const [selectedDeadlineDate, setSelectedDeadlineDate] = useState<Date | null>(null);
-  const [winnerCount, setWinnerCount] = useState(1);
   const [selectedChannelId, setSelectedChannelId] = useState<string>('');
-  const [autoRepeat, setAutoRepeat] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    reset,
+    formState: { errors }
+  } = useForm<CreateGiveawayFormValues>({
+    resolver: zodResolver(createGiveawayFormSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      deadlineText: '',
+      winnerCount: 1,
+      autoRepeat: false
+    }
+  });
+  const autoRepeat = useWatch({ control, name: 'autoRepeat' }) ?? false;
 
   const sessionQuery = useQuery({
     queryKey: ['auth-session'],
@@ -298,7 +334,7 @@ function DashboardContent({
   });
 
   const createMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (formValues: CreateGiveawayFormValues) => {
       if (!activeGuildId) {
         throw new Error('Guild is not selected');
       }
@@ -308,32 +344,25 @@ function DashboardContent({
       if (!activeChannelId) {
         throw new Error('チャンネルを選択してください。');
       }
-      if (autoRepeat && !parseIntervalMs(deadlineText)) {
-        throw new Error('間隔は 1h / 20m / 1w2d3h の形式で入力してください。');
-      }
-      if (!autoRepeat && !selectedDeadlineDate) {
+      if (!formValues.autoRepeat && !selectedDeadlineDate) {
         throw new Error('終了日時を入力してください。');
       }
       return createGiveaway({
         guildId: activeGuildId,
         channelId: activeChannelId,
-        title,
-        description,
-        deadline: autoRepeat
-          ? deadlineText.trim()
+        title: formValues.title.trim(),
+        description: formValues.description.trim(),
+        deadline: formValues.autoRepeat
+          ? formValues.deadlineText.trim()
           : format(selectedDeadlineDate as Date, "yyyy-MM-dd'T'HH:mm:ssXXX"),
-        winnerCount,
-        autoRepeat,
+        winnerCount: formValues.winnerCount,
+        autoRepeat: formValues.autoRepeat,
         idempotencyKey: crypto.randomUUID()
       });
     },
     onSuccess: async () => {
-      setTitle('');
-      setDescription('');
-      setDeadlineText('');
+      reset();
       setSelectedDeadlineDate(null);
-      setWinnerCount(1);
-      setAutoRepeat(false);
       if (activeGuildId) {
         await queryClient.invalidateQueries({ queryKey: ['giveaways', activeGuildId] });
       }
@@ -660,10 +689,9 @@ function DashboardContent({
             <h2 className="mb-4 text-base font-semibold">Giveaway作成</h2>
             <form
               className="space-y-4"
-              onSubmit={(event) => {
-                event.preventDefault();
-                createMutation.mutate();
-              }}
+              onSubmit={handleSubmit((formValues) => {
+                createMutation.mutate(formValues);
+              })}
             >
               <label className="block text-sm">
                 <span className="mb-1 block text-slate-600"># チャンネル</span>
@@ -679,17 +707,16 @@ function DashboardContent({
                 <span className="mb-1 block text-slate-600">🎁 タイトル</span>
                 <input
                   required
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
+                  {...register('title')}
                   className="w-full rounded-md border border-slate-300 px-3 py-2"
                 />
+                {errors.title ? <p className="mt-1 text-xs text-rose-600">{errors.title.message}</p> : null}
               </label>
 
               <label className="block text-sm">
                 <span className="mb-1 block text-slate-600">📝 説明</span>
                 <textarea
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
+                  {...register('description')}
                   className="w-full rounded-md border border-slate-300 px-3 py-2"
                   rows={3}
                 />
@@ -701,7 +728,9 @@ function DashboardContent({
                   type="button"
                   role="switch"
                   aria-checked={autoRepeat}
-                  onClick={() => setAutoRepeat((value) => !value)}
+                  onClick={() => {
+                    setValue('autoRepeat', !autoRepeat, { shouldDirty: true, shouldValidate: true });
+                  }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${autoRepeat ? 'bg-emerald-500' : 'bg-slate-300'}`}
                 >
                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${autoRepeat ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -716,16 +745,17 @@ function DashboardContent({
                     onChange={(date: Date | null) => {
                       const selected = date as Date | null;
                       setSelectedDeadlineDate(selected);
-                      if (selected) {
-                        setDeadlineText(format(selected, 'yyyy/MM/dd HH:mm'));
-                      }
+                      setValue('deadlineText', selected ? format(selected, 'yyyy/MM/dd HH:mm') : '', {
+                        shouldDirty: true,
+                        shouldValidate: true
+                      });
                     }}
                     onChangeRaw={(event) => {
                       if (!event) {
                         return;
                       }
                       const value = (event.target as HTMLInputElement).value;
-                      setDeadlineText(value);
+                      setValue('deadlineText', value, { shouldDirty: true, shouldValidate: true });
                       const parsed = chrono.ja.parseDate(value) ?? chrono.en.parseDate(value);
                       setSelectedDeadlineDate(parsed ?? null);
                     }}
@@ -745,13 +775,13 @@ function DashboardContent({
                   <span className="mb-1 block text-slate-600">⏱️ 間隔</span>
                   <input
                     required
-                    value={deadlineText}
-                    onChange={(event) => setDeadlineText(event.target.value)}
+                    {...register('deadlineText')}
                     className="w-full rounded-md border border-slate-300 px-3 py-2"
                     placeholder="1h, 20m, 1w2d3h"
                   />
                 </label>
               )}
+              {errors.deadlineText ? <p className="text-xs text-rose-600">{errors.deadlineText.message}</p> : null}
 
               <label className="block text-sm">
                 <span className="mb-1 block text-slate-600">🏆 当選人数</span>
@@ -759,10 +789,10 @@ function DashboardContent({
                   required
                   type="number"
                   min={1}
-                  value={winnerCount}
-                  onChange={(event) => setWinnerCount(Number(event.target.value))}
+                  {...register('winnerCount', { valueAsNumber: true })}
                   className="w-full rounded-md border border-slate-300 px-3 py-2"
                 />
+                {errors.winnerCount ? <p className="mt-1 text-xs text-rose-600">{errors.winnerCount.message}</p> : null}
               </label>
 
               <button
