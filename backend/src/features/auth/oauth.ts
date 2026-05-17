@@ -5,6 +5,8 @@ import { AppError } from '../../shared/errors/index.js';
 import { SESSION_TTL_MS } from './constants.js';
 import type { AuthGuild, AuthSession } from './types.js';
 
+const OAUTH_GUILD_CONCURRENCY = 5;
+
 function buildDiscordAvatarUrl(user: { id: string; avatar: string | null }): string {
   if (!user.avatar) {
     return `https://cdn.discordapp.com/embed/avatars/${Number(user.id) % 5}.png`;
@@ -22,6 +24,21 @@ export function buildRedirectUri(): string {
     throw new AppError('DISCORD_OAUTH_REDIRECT_URI or APP_BASE_URL is required.', 500);
   }
   return `${appBase.replace(/\/$/, '')}/api/auth/callback`;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const normalizedConcurrency = Math.max(1, concurrency);
+  const results: R[] = [];
+  for (let start = 0; start < items.length; start += normalizedConcurrency) {
+    const batch = items.slice(start, start + normalizedConcurrency);
+    const batchResults = await Promise.all(batch.map((item, offset) => mapper(item, start + offset)));
+    results.push(...batchResults);
+  }
+  return results;
 }
 
 export async function createSessionFromOAuth(client: Client, accessToken: string): Promise<AuthSession> {
@@ -52,33 +69,40 @@ export async function createSessionFromOAuth(client: Client, accessToken: string
     owner: boolean;
   }>;
 
-  const guilds: AuthGuild[] = [];
-  for (const oauthGuild of oauthGuilds) {
+  const guildResults = await mapWithConcurrency(oauthGuilds, OAUTH_GUILD_CONCURRENCY, async (oauthGuild) => {
     const guild = await client.guilds.fetch(oauthGuild.id).catch(() => null);
     if (!guild) {
-      continue;
+      return null;
     }
     const settings = await getGuildSettings(guild.id);
-    const member = await guild.members.fetch(user.id).catch(() => null);
-    if (!member) {
-      continue;
+    const requiresMemberFetch =
+      settings.dashboardUsableRoleIds.length > 0 || settings.giveawayCreatorRoleIds.length > 0;
+    const member = requiresMemberFetch ? await guild.members.fetch(user.id).catch(() => null) : null;
+    if (requiresMemberFetch && !member) {
+      return null;
     }
     const permissionBits = BigInt(oauthGuild.permissions);
     const hasAdministratorPermission = (permissionBits & 0x8n) === 0x8n;
-    const hasDashboardRole = settings.dashboardUsableRoleIds.some((roleId) => member.roles.cache.has(roleId));
-    const hasCreatorRole = settings.giveawayCreatorRoleIds.length === 0
-      ? (oauthGuild.owner || hasAdministratorPermission)
-      : settings.giveawayCreatorRoleIds.some((roleId) => member.roles.cache.has(roleId));
+    const hasDashboardRole = member
+      ? settings.dashboardUsableRoleIds.some((roleId) => member.roles.cache.has(roleId))
+      : false;
+    let hasCreatorRole = false;
+    if (settings.giveawayCreatorRoleIds.length === 0) {
+      hasCreatorRole = oauthGuild.owner || hasAdministratorPermission;
+    } else if (member) {
+      hasCreatorRole = settings.giveawayCreatorRoleIds.some((roleId) => member.roles.cache.has(roleId));
+    }
 
-    guilds.push({
+    return {
       id: guild.id,
       name: guild.name,
       iconUrl: guild.iconURL({ size: 64, extension: 'png' }),
       canUseDashboard: oauthGuild.owner || hasDashboardRole,
       canCreateGiveaway: oauthGuild.owner || hasCreatorRole,
       isOwner: oauthGuild.owner
-    });
-  }
+    } satisfies AuthGuild;
+  });
+  const guilds: AuthGuild[] = guildResults.filter((guild): guild is AuthGuild => guild !== null);
 
   return {
     token: randomBytes(32).toString('hex'),

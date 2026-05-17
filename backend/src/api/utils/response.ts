@@ -16,6 +16,11 @@ type ErrorResponseContext = {
 
 export function respondError(c: ErrorResponseContext, error: unknown) {
   const statusCode = getErrorStatusCode(error) as ApiErrorStatus;
-  logger.error('API request failed', { statusCode, error: getErrorMessage(error), rawError: error });
+  const logPayload = { statusCode, error: getErrorMessage(error), rawError: error };
+  if (statusCode >= 500) {
+    logger.error('API request failed', logPayload);
+  } else {
+    logger.warn('API request failed', logPayload);
+  }
   return c.json({ error: getPublicErrorMessage(statusCode) }, statusCode);
 }
