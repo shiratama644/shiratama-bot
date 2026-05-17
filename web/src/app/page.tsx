@@ -4,24 +4,26 @@ import { cookies } from 'next/headers';
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
 function parseAuthSession(value: unknown): AuthSession | null {
-  if (!value || typeof value !== 'object') {
+  if (!isRecord(value)) {
     return null;
   }
-  const session = value as Partial<AuthSession>;
-  const user = session.user as Partial<AuthSession['user']> | undefined;
-  if (
-    !user ||
-    typeof user.id !== 'string' ||
-    typeof user.name !== 'string' ||
-    typeof user.avatarUrl !== 'string'
-  ) {
+  const user = value.user;
+  if (!isRecord(user)) {
     return null;
   }
-  if (!Array.isArray(session.guilds)) {
+  const { id, name, avatarUrl } = user;
+  if (typeof id !== 'string' || typeof name !== 'string' || typeof avatarUrl !== 'string') {
     return null;
   }
-  return session as AuthSession;
+  if (!Array.isArray(value.guilds)) {
+    return null;
+  }
+  return value as AuthSession;
 }
 
 async function fetchInitialSession(): Promise<{ initialSession: AuthSession | null; fetchedAt: number }> {
