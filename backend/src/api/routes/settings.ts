@@ -26,7 +26,10 @@ export function registerSettingsRoutes(app: Hono): void {
       const session = await requireSession(c);
       const guild = getSessionGuild(session, guildId);
       if (!guild.isOwner) {
-        throw new AppError('Only server owners can update settings.', 403);
+        throw new AppError(
+          'Only server owners can update settings. Please ask the server owner to make this change.',
+          403
+        );
       }
       const body = c.req.valid('json');
       const current = await getGuildSettings(guildId);

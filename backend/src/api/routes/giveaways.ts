@@ -118,7 +118,10 @@ export function registerGiveawayRoutes(app: Hono, client: Client): void {
       }
       const guild = getSessionGuild(session, body.guildId);
       if (!guild.canCreateGiveaway) {
-        throw new AppError('You do not have permission to create giveaways.', 403);
+        throw new AppError(
+          'You do not have permission to create giveaways. Ask a server owner to grant your role as a giveaway creator.',
+          403
+        );
       }
 
       if (idempotencyKey) {
@@ -139,7 +142,10 @@ export function registerGiveawayRoutes(app: Hono, client: Client): void {
 
       const settings = await getGuildSettings(body.guildId);
       if (!settings.giveawayChannelIds.includes(body.channelId)) {
-        throw new AppError('This channel is not allowed for giveaway creation.', 403);
+        throw new AppError(
+          'This channel is not allowed for giveaway creation. Ask a server owner to add this channel in giveaway settings.',
+          403
+        );
       }
 
       const created = await createGiveawayPost({
