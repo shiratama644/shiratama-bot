@@ -27,7 +27,8 @@ import { AppError } from '../../shared/errors/index.js';
 import { buttonClaimId, embedClaimFooterText } from '../../shared/constants/ids.js';
 import type { Giveaway } from '../../shared/types/common.js';
 import { logger } from '../../shared/logger/index.js';
-import { giveawayButtons, giveawayEmbed, parseDurationSeconds } from './embeds.js';
+import { parseIntervalSeconds } from '../../shared/utils/deadline.js';
+import { giveawayButtons, giveawayEmbed } from './embeds.js';
 import { DEFAULT_LANGUAGE, t } from '../../shared/i18n/index.js';
 
 function formatWinnerMentions(winners: string[]): string {
@@ -39,7 +40,7 @@ function calculateClaimDeadlineTimestamp(giveaway: { endAt: Date; claimDeadline:
     ? giveaway.claimDeadline
     : null;
   if (!claimDeadlineText) return null;
-  const claimDeadlineSecs = parseDurationSeconds(claimDeadlineText);
+  const claimDeadlineSecs = parseIntervalSeconds(claimDeadlineText);
   if (claimDeadlineSecs <= 0) return null;
   return Math.floor(giveaway.endAt.getTime() / 1000) + claimDeadlineSecs;
 }
