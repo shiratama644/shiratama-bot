@@ -144,7 +144,7 @@ function DashboardContent({
     queryKey: ['auth-session'],
     queryFn: fetchAuthSession,
     initialData: initialSession,
-    initialDataUpdatedAt: initialSession ? initialSessionFetchedAt : undefined,
+    initialDataUpdatedAt: initialSessionFetchedAt,
     retry: false
   });
 

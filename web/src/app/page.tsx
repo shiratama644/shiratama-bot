@@ -17,6 +17,7 @@ async function fetchInitialSession(): Promise<{ initialSession: AuthSession | nu
     });
 
     if (!response.ok) {
+      console.error('Failed to fetch SSR auth session:', response.status);
       return { initialSession: null, fetchedAt: Date.now() };
     }
 
@@ -24,7 +25,8 @@ async function fetchInitialSession(): Promise<{ initialSession: AuthSession | nu
       initialSession: (await response.json()) as AuthSession,
       fetchedAt: Date.now()
     };
-  } catch {
+  } catch (error) {
+    console.error('SSR auth session fetch error:', error);
     return { initialSession: null, fetchedAt: Date.now() };
   }
 }
