@@ -1,51 +1,27 @@
 import { DashboardApp } from '@/components/dashboard-app';
 import type { AuthGuild, AuthSession } from '@/lib/api';
 import { cookies } from 'next/headers';
+import { z } from 'zod';
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object';
-}
+const authGuildSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  iconUrl: z.string().nullable(),
+  canUseDashboard: z.boolean(),
+  canCreateGiveaway: z.boolean(),
+  isOwner: z.boolean()
+}) satisfies z.ZodType<AuthGuild>;
 
-function parseAuthGuild(value: unknown): AuthGuild | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-  const { id, name, iconUrl, canUseDashboard, canCreateGiveaway, isOwner } = value;
-  if (
-    typeof id !== 'string' ||
-    typeof name !== 'string' ||
-    (iconUrl !== null && typeof iconUrl !== 'string') ||
-    typeof canUseDashboard !== 'boolean' ||
-    typeof canCreateGiveaway !== 'boolean' ||
-    typeof isOwner !== 'boolean'
-  ) {
-    return null;
-  }
-  return { id, name, iconUrl, canUseDashboard, canCreateGiveaway, isOwner };
-}
-
-function parseAuthSession(value: unknown): AuthSession | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-  const user = value.user;
-  if (!isRecord(user)) {
-    return null;
-  }
-  const { id, name, avatarUrl } = user;
-  if (typeof id !== 'string' || typeof name !== 'string' || typeof avatarUrl !== 'string') {
-    return null;
-  }
-  if (!Array.isArray(value.guilds)) {
-    return null;
-  }
-  const guilds = value.guilds
-    .map((guild) => parseAuthGuild(guild))
-    .filter((guild): guild is AuthGuild => guild !== null);
-  return { user: { id, name, avatarUrl }, guilds };
-}
+const authSessionSchema = z.object({
+  user: z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    avatarUrl: z.string().min(1)
+  }),
+  guilds: z.array(authGuildSchema)
+}) satisfies z.ZodType<AuthSession>;
 
 async function fetchInitialSession(): Promise<{ initialSession: AuthSession | null; fetchedAt: number }> {
   try {
@@ -67,11 +43,12 @@ async function fetchInitialSession(): Promise<{ initialSession: AuthSession | nu
       return { initialSession: null, fetchedAt: Date.now() };
     }
 
-    const payload = parseAuthSession(await response.json());
-    if (!payload) {
+    const parsed = authSessionSchema.safeParse(await response.json());
+    if (!parsed.success) {
       console.error('Invalid SSR auth session payload');
+      return { initialSession: null, fetchedAt: Date.now() };
     }
-    return { initialSession: payload, fetchedAt: Date.now() };
+    return { initialSession: parsed.data, fetchedAt: Date.now() };
   } catch (error) {
     console.error('SSR auth session fetch error:', error);
     return { initialSession: null, fetchedAt: Date.now() };
