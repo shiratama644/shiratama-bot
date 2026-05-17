@@ -31,10 +31,10 @@ async function mapWithConcurrency<T, R>(
   concurrency: number,
   mapper: (item: T, index: number) => Promise<R>
 ): Promise<R[]> {
-  const safeConcurrency = Math.max(1, concurrency);
+  const normalizedConcurrency = Math.max(1, concurrency);
   const results: R[] = [];
-  for (let start = 0; start < items.length; start += safeConcurrency) {
-    const batch = items.slice(start, start + safeConcurrency);
+  for (let start = 0; start < items.length; start += normalizedConcurrency) {
+    const batch = items.slice(start, start + normalizedConcurrency);
     const batchResults = await Promise.all(batch.map((item, offset) => mapper(item, start + offset)));
     results.push(...batchResults);
   }
@@ -86,11 +86,12 @@ export async function createSessionFromOAuth(client: Client, accessToken: string
     const hasDashboardRole = member
       ? settings.dashboardUsableRoleIds.some((roleId) => member.roles.cache.has(roleId))
       : false;
-    const hasCreatorRole = settings.giveawayCreatorRoleIds.length === 0
-      ? (oauthGuild.owner || hasAdministratorPermission)
-      : member
-        ? settings.giveawayCreatorRoleIds.some((roleId) => member.roles.cache.has(roleId))
-        : false;
+    let hasCreatorRole = false;
+    if (settings.giveawayCreatorRoleIds.length === 0) {
+      hasCreatorRole = oauthGuild.owner || hasAdministratorPermission;
+    } else if (member) {
+      hasCreatorRole = settings.giveawayCreatorRoleIds.some((roleId) => member.roles.cache.has(roleId));
+    }
 
     return {
       id: guild.id,
