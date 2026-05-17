@@ -1,7 +1,7 @@
 # applejp-bot プログラム問題一覧
 
 このドキュメントは、現行実装を探索して見つかった「セキュリティ以外」のプログラム上の問題を整理したものです。  
-（確認日: 2026-05-16）
+（確認日: 2026-05-17）
 
 ## 1) 受け取り期限フォーマットの仕様不一致（`w` が実装で未対応）
 
@@ -13,9 +13,9 @@
 - **影響**
   - UI/文言と実挙動がずれ、運用者が設定ミスに気づきにくい。
 - **該当箇所**
-  - `backend/src/i18n.ts`
-  - `backend/src/giveaway/embed.ts`
-  - `backend/src/giveaway/service.ts`
+  - `backend/src/shared/i18n/index.ts`
+  - `backend/src/features/giveaway/embeds.ts`
+  - `backend/src/features/giveaway/service.ts`
 
 ## 2) `/gsettings` でロール・チャンネル設定を空に戻せない
 
@@ -26,7 +26,7 @@
 - **影響**
   - 一度設定した内容をクリアできず、設定変更の自由度が下がる。
 - **該当箇所**
-  - `backend/src/commands/gsettings.ts`
+  - `backend/src/features/giveaway/commands/settings.ts`
   - `backend/src/db/guildSettings.ts`
 
 ## 3) 過去日時の締切を作成できる
@@ -38,8 +38,8 @@
 - **影響**
   - 作成直後に終了対象となる Giveaway が発生し、運用ミスにつながる。
 - **該当箇所**
-  - `backend/src/deadline.ts`
-  - `backend/src/giveaway/service.ts`
+  - `backend/src/shared/utils/deadline.ts`
+  - `backend/src/features/giveaway/service.ts`
 
 ## 4) メンバー一覧の取得が欠落しやすい構成
 
@@ -51,8 +51,8 @@
 - **影響**
   - ダッシュボード上のメンバー情報が不足し、再抽選結果表示などで `Unknown user` が増える。
 - **該当箇所**
-  - `backend/src/bot.ts`
-  - `backend/src/api.ts`
+  - `backend/src/discord/bot.ts`
+  - `backend/src/api/routes/guilds.ts`
 
 ---
 
