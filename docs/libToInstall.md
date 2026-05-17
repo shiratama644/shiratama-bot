@@ -28,7 +28,6 @@
 
 1. backend: `csrf-csrf`, `rate-limiter-flexible`, `ioredis`
 2. web: `react-hook-form`, `@hookform/resolvers`, `zod`
-3. backend/web 共通運用強化: `pino`, `pino-http`, `@sentry/node`
+3. backend運用強化: `pino`, `pino-http`, `@sentry/node`
 4. UX強化: `@tanstack/react-table`, `recharts`
 5. ハードニング: `next-safe-middleware`, `dompurify`
-
