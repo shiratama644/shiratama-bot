@@ -5,14 +5,27 @@ const appLogger = pino({
   base: undefined
 });
 
+function splitBindings(args: unknown[]): { bindings: Record<string, unknown>; rest: unknown[] } {
+  if (args.length > 0 && args[0] !== null && typeof args[0] === 'object' && !Array.isArray(args[0])) {
+    return { bindings: args[0] as Record<string, unknown>, rest: args.slice(1) };
+  }
+  return { bindings: {}, rest: args };
+}
+
 export const logger = {
   info: (message: string, ...args: unknown[]) => {
-    appLogger.info({ args }, message);
+    const { bindings, rest } = splitBindings(args);
+    appLogger.info(rest.length > 0 ? { ...bindings, args: rest } : bindings, message);
   },
   error: (message: string, error?: unknown, ...args: unknown[]) => {
-    appLogger.error({ error, args }, message);
+    const { bindings, rest } = splitBindings(args);
+    appLogger.error(
+      rest.length > 0 ? { ...bindings, error, args: rest } : { ...bindings, error },
+      message
+    );
   },
   warn: (message: string, ...args: unknown[]) => {
-    appLogger.warn({ args }, message);
+    const { bindings, rest } = splitBindings(args);
+    appLogger.warn(rest.length > 0 ? { ...bindings, args: rest } : bindings, message);
   }
 };
