@@ -1,7 +1,17 @@
 import { DASHBOARD_COOKIE } from './constants.js';
 
+function shouldUseSecureCookie(): boolean {
+  if (process.env.COOKIE_SECURE === 'true') {
+    return true;
+  }
+  if (process.env.COOKIE_SECURE === 'false') {
+    return false;
+  }
+  return process.env.NODE_ENV === 'production';
+}
+
 function buildCookieHeader(token: string, maxAgeSeconds: number): string {
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const secure = shouldUseSecureCookie() ? '; Secure' : '';
   return `${DASHBOARD_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}${secure}`;
 }
 

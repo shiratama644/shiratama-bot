@@ -19,6 +19,7 @@ import {
 import { logger } from '../../../shared/logger/index.js';
 import { AppError } from '../../../shared/errors/index.js';
 import { DEFAULT_LANGUAGE, t } from '../../../shared/i18n/index.js';
+import { recordAuditEvent } from '../../audit/index.js';
 
 export async function handleModalSubmit(client: Client, interaction: ModalSubmitInteraction) {
   if (interaction.customId === MODAL_GIVEAWAY_CREATE) {
@@ -29,6 +30,7 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     const autoRep = autoRepValues[0] === VALUE_AUTOREP_ENABLE;
     const winnerCountRaw = interaction.fields.getTextInputValue(FIELD_CREATE_WINNERS);
     const winnerCount = Number.parseInt(winnerCountRaw || '1', 10);
+    const winnerCountWithFallback = Number.isNaN(winnerCount) ? 1 : winnerCount;
 
     if (!interaction.guildId) {
       throw new AppError(t(DEFAULT_LANGUAGE, 'pleaseRunInTextChannelInServer'), 400);
@@ -50,10 +52,23 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
       title,
       description,
       deadlineInput: duration,
-      winnerCount: Number.isNaN(winnerCount) ? 1 : winnerCount,
+      winnerCount: winnerCountWithFallback,
       createdBy: interaction.user.id,
       interval: autoRep ? duration : undefined,
       claimDeadline
+    });
+    await recordAuditEvent({
+      guildId: interaction.guildId,
+      actorId: interaction.user.id,
+      action: 'giveaway.create',
+      targetType: 'giveaway',
+      targetId: created.id,
+      detail: JSON.stringify({
+        channelId: interaction.channelId,
+        title,
+        winnerCount: winnerCountWithFallback,
+        autoRepeat: autoRep
+      })
     });
 
     await interaction.reply({
@@ -88,6 +103,19 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
       language,
       giveawayChannelIds,
       defaultClaimDeadline
+    });
+    await recordAuditEvent({
+      guildId: interaction.guildId,
+      actorId: interaction.user.id,
+      action: 'settings.update',
+      targetType: 'guild_settings',
+      targetId: interaction.guildId,
+      detail: JSON.stringify({
+        language,
+        giveawayCreatorRoleIds,
+        giveawayChannelIds,
+        defaultClaimDeadline
+      })
     });
 
     await interaction.reply({

@@ -15,6 +15,19 @@ if (!token || !appId || !process.env.DATABASE_URL) {
   throw new Error('DISCORD_BOT_TOKEN / DISCORD_APP_ID / DATABASE_URL are required.');
 }
 
+if (process.env.NODE_ENV === 'production') {
+  const requiredHttpsUrls = [
+    { key: 'APP_BASE_URL', value: process.env.APP_BASE_URL },
+    { key: 'WEB_BASE_URL', value: process.env.WEB_BASE_URL },
+    { key: 'CORS_ORIGIN', value: process.env.CORS_ORIGIN }
+  ];
+  for (const { key, value } of requiredHttpsUrls) {
+    if (!value || !value.startsWith('https://')) {
+      throw new Error(`${key} must be configured with https:// in production.`);
+    }
+  }
+}
+
 await initSchema();
 
 const client = buildClient(token, appId, guildId);

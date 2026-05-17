@@ -11,11 +11,21 @@ let db: Kysely<Database> | null = null;
 export function getDb(): Kysely<Database> {
   if (db === null) {
     const connectionString = process.env.DATABASE_URL;
+    const sslMode = process.env.DATABASE_SSL_MODE ?? (process.env.NODE_ENV === 'production' ? 'require' : 'prefer');
     if (!connectionString) {
       logger.error('DATABASE_URL is not defined in environment variables');
       throw new AppError('DATABASE_URL environment variable is not configured.', 500);
     }
-    pool = new Pool({ connectionString });
+    if (process.env.NODE_ENV === 'production' && sslMode !== 'require') {
+      throw new AppError('DATABASE_SSL_MODE must be "require" in production.', 500);
+    }
+    const shouldRequireSsl = sslMode === 'require';
+    pool = new Pool({
+      connectionString,
+      ssl: shouldRequireSsl
+        ? { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false' }
+        : undefined
+    });
     pool.on('error', (err) => {
       logger.error('Unexpected error on idle database client', err);
     });
@@ -103,9 +113,31 @@ export async function initSchema(): Promise<void> {
         PRIMARY KEY (giveaway_id, user_id)
       );
 
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id TEXT PRIMARY KEY,
+        guild_id TEXT,
+        actor_id TEXT,
+        action TEXT NOT NULL,
+        target_type TEXT,
+        target_id TEXT,
+        detail TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS idempotency_keys (
+        key TEXT PRIMARY KEY,
+        actor_id TEXT NOT NULL,
+        guild_id TEXT NOT NULL,
+        giveaway_id TEXT REFERENCES giveaways(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
       CREATE INDEX IF NOT EXISTS idx_giveaways_active_end_at ON giveaways(status, end_at);
       CREATE INDEX IF NOT EXISTS idx_giveaways_guild_status_created_at ON giveaways(guild_id, status, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_giveaway_entries_giveaway_id ON giveaway_entries(giveaway_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_guild_created_at ON audit_logs(guild_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_action_created_at ON audit_logs(action, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_idempotency_keys_actor_created_at ON idempotency_keys(actor_id, created_at DESC);
     `).execute(getDb());
 
     // Migrate existing tables by adding columns that may not exist yet

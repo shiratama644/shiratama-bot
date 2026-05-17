@@ -35,8 +35,29 @@ export interface GiveawayEntriesTable {
   joined_at: ColumnType<Date, Date | undefined, Date>;
 }
 
+export interface AuditLogsTable {
+  id: string;
+  guild_id: ColumnType<string | null, string | null | undefined, string | null>;
+  actor_id: ColumnType<string | null, string | null | undefined, string | null>;
+  action: string;
+  target_type: ColumnType<string | null, string | null | undefined, string | null>;
+  target_id: ColumnType<string | null, string | null | undefined, string | null>;
+  detail: ColumnType<string | null, string | null | undefined, string | null>;
+  created_at: ColumnType<Date, Date | undefined, Date>;
+}
+
+export interface IdempotencyKeysTable {
+  key: string;
+  actor_id: string;
+  guild_id: string;
+  giveaway_id: ColumnType<string | null, string | null | undefined, string | null>;
+  created_at: ColumnType<Date, Date | undefined, Date>;
+}
+
 export interface Database {
   guild_settings: GuildSettingsTable;
   giveaways: GiveawaysTable;
   giveaway_entries: GiveawayEntriesTable;
+  audit_logs: AuditLogsTable;
+  idempotency_keys: IdempotencyKeysTable;
 }

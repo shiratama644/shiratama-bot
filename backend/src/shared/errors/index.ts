@@ -41,3 +41,11 @@ export function getErrorMessage(error: unknown): string {
   }
   return 'Error';
 }
+
+export function getPublicErrorMessage(statusCode: number): string {
+  if (statusCode === 400) return 'Invalid request.';
+  if (statusCode === 401) return 'Authentication required.';
+  if (statusCode === 403) return 'Forbidden.';
+  if (statusCode === 404) return 'Resource not found.';
+  return 'Internal server error.';
+}

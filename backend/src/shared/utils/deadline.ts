@@ -46,14 +46,21 @@ export function parseDeadline(input: string): Date {
     return new Date(Date.now() + intervalMs);
   }
 
+  const ensureFuture = (date: Date): Date => {
+    if (date.getTime() <= Date.now()) {
+      throw new Error('Deadline must be a future date/time.');
+    }
+    return date;
+  };
+
   const parsed = dayjs(value, 'YYYY/MM/DD', true);
   if (!parsed.isValid()) {
     const date = new Date(value);
     if (!Number.isNaN(date.getTime())) {
-      return date;
+      return ensureFuture(date);
     }
-    throw new Error('Deadline must be in YYYY/MM/DD or 10m/10h/5d format.');
+    throw new Error('Deadline must be in YYYY/MM/DD or interval format like 10m/10h/5d/1w.');
   }
 
-  return parsed.endOf('day').toDate();
+  return ensureFuture(parsed.endOf('day').toDate());
 }

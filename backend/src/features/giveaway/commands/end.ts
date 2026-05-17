@@ -6,6 +6,7 @@ import { assertCanManageGiveaways } from '../permissions.js';
 import { ensureGiveawayInGuild } from '../index.js';
 import { t } from '../../../shared/i18n/index.js';
 import { respondGiveawayAutocomplete } from './autocomplete.js';
+import { recordAuditEvent } from '../../audit/index.js';
 
 export const endCommand: Command = {
   name: 'gend',
@@ -27,6 +28,13 @@ export const endCommand: Command = {
     const id = interaction.options.getString('id', true);
     await ensureGiveawayInGuild(id, interaction.guildId);
     await endGiveaway(client, id, true);
+    await recordAuditEvent({
+      guildId: interaction.guildId,
+      actorId: interaction.user.id,
+      action: 'giveaway.end',
+      targetType: 'giveaway',
+      targetId: id
+    });
     const settings = await getGuildSettings(interaction.guildId);
     await interaction.reply({ content: t(settings.language, 'giveawayEnded', { id }), ephemeral: true });
   },

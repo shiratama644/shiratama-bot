@@ -11,8 +11,13 @@ import { commands } from '../features/giveaway/commands/index.js';
 import { logger } from '../shared/logger/index.js';
 
 export function buildClient(token: string, appId: string, guildId?: string): Client {
+  const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages];
+  if (process.env.DISCORD_ENABLE_GUILD_MEMBERS_INTENT === 'true') {
+    intents.push(GatewayIntentBits.GuildMembers);
+  }
+
   const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages]
+    intents
   });
 
   client.once('clientReady', async () => {

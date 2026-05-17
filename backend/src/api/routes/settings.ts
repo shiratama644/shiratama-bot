@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { getGuildSettings, setGuildSettings } from '../../db/index.js';
 import { AppError } from '../../shared/errors/index.js';
 import { getSessionGuild, requireSession } from '../../features/auth/index.js';
+import { recordAuditEvent } from '../../features/audit/index.js';
 import { settingsSchema } from '../schemas/settings.js';
 import { requireParam, respondError } from '../utils/response.js';
 
@@ -39,6 +40,21 @@ export function registerSettingsRoutes(app: Hono): void {
         giveawayChannelIds: body.giveawayChannelIds ?? current.giveawayChannelIds,
         defaultClaimDeadline:
           body.defaultClaimDeadline !== undefined ? body.defaultClaimDeadline : current.defaultClaimDeadline
+      });
+      await recordAuditEvent({
+        guildId,
+        actorId: session.user.id,
+        action: 'settings.update',
+        targetType: 'guild_settings',
+        targetId: guildId,
+        detail: JSON.stringify({
+          language: body.language ?? current.language,
+          giveawayCreatorRoleIds: body.giveawayCreatorRoleIds ?? current.giveawayCreatorRoleIds,
+          dashboardUsableRoleIds: dashboardUsableRoleIds ?? current.dashboardUsableRoleIds,
+          giveawayChannelIds: body.giveawayChannelIds ?? current.giveawayChannelIds,
+          defaultClaimDeadline:
+            body.defaultClaimDeadline !== undefined ? body.defaultClaimDeadline : current.defaultClaimDeadline
+        })
       });
       return c.json({ ok: true });
     } catch (error) {

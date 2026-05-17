@@ -1,6 +1,7 @@
 import type { Client } from 'discord.js';
 import type { Hono } from 'hono';
-import { AppError, getErrorMessage } from '../../shared/errors/index.js';
+import { AppError, getErrorStatusCode, getPublicErrorMessage } from '../../shared/errors/index.js';
+import { recordAuditEvent } from '../../features/audit/index.js';
 import {
   buildRedirectUri,
   cleanupExpiredSessions,
@@ -77,21 +78,52 @@ export function registerAuthRoutes(app: Hono, client: Client): void {
 
       const tokenPayload = await tokenResponse.json() as { access_token: string };
       const session = await createSessionFromOAuth(client, tokenPayload.access_token);
+      for (const guild of session.guilds) {
+        await recordAuditEvent({
+          guildId: guild.id,
+          actorId: session.user.id,
+          action: 'auth.login.success',
+          targetType: 'session',
+          targetId: session.token
+        });
+      }
       c.header('Set-Cookie', storeSession(session));
       return c.redirect(webBaseUrl || '/', 302);
     } catch (error) {
+      await recordAuditEvent({
+        guildId: null,
+        actorId: null,
+        action: 'auth.login.failure',
+        targetType: 'oauth_callback',
+        detail: String(getErrorStatusCode(error))
+      });
       const webBaseUrl = (process.env.WEB_BASE_URL ?? process.env.APP_BASE_URL ?? '').replace(/\/$/, '');
       if (webBaseUrl) {
-        return c.redirect(`${webBaseUrl}/?authError=${encodeURIComponent(getErrorMessage(error))}`, 302);
+        const statusCode = getErrorStatusCode(error);
+        return c.redirect(`${webBaseUrl}/?authError=${encodeURIComponent(getPublicErrorMessage(statusCode))}`, 302);
       }
       return respondError(c, error);
     }
   });
 
-  app.post('/api/auth/logout', (c) => {
+  app.post('/api/auth/logout', async (c) => {
     try {
       const token = parseCookieToken(c.req.header('cookie'));
       if (token) {
+        try {
+          const session = requireSession(c);
+          for (const guild of session.guilds) {
+            await recordAuditEvent({
+              guildId: guild.id,
+              actorId: session.user.id,
+              action: 'auth.logout',
+              targetType: 'session',
+              targetId: token
+            });
+          }
+        } catch {
+          // Ignore session read failures on logout.
+        }
         deleteSessionByToken(token);
       }
       c.header('Set-Cookie', clearCookieHeader());

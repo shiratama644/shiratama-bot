@@ -64,7 +64,7 @@ export const settingsCommand: Command = {
                         .setRoleSelectMenuComponent(
                             new RoleSelectMenuBuilder()
                                 .setCustomId(FIELD_SETTINGS_WHO)
-                                .setMinValues(1)
+                                .setMinValues(0)
                                 .setMaxValues(25)
                                 .setDefaultRoles(settings.giveawayCreatorRoleIds)
                         )
@@ -75,7 +75,7 @@ export const settingsCommand: Command = {
                         .setChannelSelectMenuComponent(
                             new ChannelSelectMenuBuilder()
                                 .setCustomId(FIELD_SETTINGS_WHERE)
-                                .setMinValues(1)
+                                .setMinValues(0)
                                 .setMaxValues(25)
                                 .setChannelTypes([ChannelType.GuildText])
                                 .setDefaultChannels(settings.giveawayChannelIds)

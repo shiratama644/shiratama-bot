@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction } from 'discord.js';
+import { PermissionFlagsBits, type ChatInputCommandInteraction } from 'discord.js';
 import { getGiveawayCreatorRoleIds, getGuildSettings } from '../../db/index.js';
 import { AppError } from '../../shared/errors/index.js';
 import { DEFAULT_LANGUAGE, t } from '../../shared/i18n/index.js';
@@ -16,7 +16,12 @@ export async function assertCanManageGiveaways(interaction: ChatInputCommandInte
   const language = settings.language;
   const giveawayCreatorRoleIds = await getGiveawayCreatorRoleIds(interaction.guildId);
   if (giveawayCreatorRoleIds.length === 0) {
-    return;
+    const isOwner = interaction.guild?.ownerId === interaction.user.id;
+    const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ?? false;
+    if (isOwner || isAdmin) {
+      return;
+    }
+    throw new AppError(t(language, 'noPermissionManageGiveaways'), 403);
   }
 
   const memberRoles = interaction.member?.roles;
