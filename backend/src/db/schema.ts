@@ -46,33 +46,9 @@ export interface AuditLogsTable {
   created_at: ColumnType<Date, Date | undefined, Date>;
 }
 
-export interface IdempotencyKeysTable {
-  key: string;
-  actor_id: string;
-  guild_id: string;
-  giveaway_id: ColumnType<string | null, string | null | undefined, string | null>;
-  created_at: ColumnType<Date, Date | undefined, Date>;
-}
-
-export interface AuthSessionsTable {
-  token: string;
-  session_json: string;
-  expires_at: ColumnType<Date, Date, Date>;
-  created_at: ColumnType<Date, Date | undefined, Date>;
-}
-
-export interface OauthStatesTable {
-  state: string;
-  expires_at: ColumnType<Date, Date, Date>;
-  created_at: ColumnType<Date, Date | undefined, Date>;
-}
-
 export interface Database {
   guild_settings: GuildSettingsTable;
   giveaways: GiveawaysTable;
   giveaway_entries: GiveawayEntriesTable;
   audit_logs: AuditLogsTable;
-  idempotency_keys: IdempotencyKeysTable;
-  auth_sessions: AuthSessionsTable;
-  oauth_states: OauthStatesTable;
 }

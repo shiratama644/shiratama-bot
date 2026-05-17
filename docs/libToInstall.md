@@ -8,7 +8,7 @@
 |---|---|---|
 | `csrf-csrf` | Double Submit Cookie 方式の CSRF トークン検証 | `security.md` の「CSRF 対策不足（High）」に直接対応。Cookie 属性依存から明示的トークン検証へ移行できる。 |
 | `rate-limiter-flexible` | 認証/API単位のレート制限（IP・キー単位） | `security.md` の「API レート制限未実装（High）」対応。`/api/auth/*` と Giveaway 系操作のDoS耐性を上げる。 |
-| `ioredis` | Redis クライアント（共有ストア） | `security.md` の「セッション/State ストアがメモリのみ（Medium）」対応。セッション共有化、レート制限カウンタ、将来のジョブ/キャッシュ基盤に再利用可能。 |
+| `ioredis` | Redis クライアント（共有ストア） | `security.md` の「セッション/State ストアがメモリのみ（Medium）」対応として導入済み。セッション共有化、レート制限カウンタ、Giveaway API の冪等性制御に利用。（完了済み） |
 | `pino` / `pino-http` | 構造化ログ・HTTPログ・監査ログ基盤 | `security.md` の「監査ログ不足（Medium）」と「内部エラー露出（High）」への土台。外部返却メッセージを抑えつつ、詳細はサーバーログに安全に残せる。 |
 | `@sentry/node` | 例外監視・アラート・トレース | 障害検知を強化し、`feature-list.md` の「失敗時リトライ/通知改善」に必要な運用監視を補強。公開後の不具合の早期発見に有効。 |
 | `@hono/swagger-ui` + `@hono/zod-openapi` | OpenAPI 生成/公開（API仕様の可視化） | `program.md` にある仕様不一致（入力フォーマットなど）を減らすため、API 入出力仕様を機械可読で統一。フロント・バックの認識差分を抑える。 |

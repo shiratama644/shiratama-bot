@@ -3,6 +3,7 @@ import { serve } from '@hono/node-server';
 import { buildClient } from './discord/bot.js';
 import { createApiApp } from './api/index.js';
 import { initSchema } from './db/index.js';
+import { initRedis } from './redis/client.js';
 
 dotenv.config();
 
@@ -11,8 +12,8 @@ const appId = process.env.DISCORD_APP_ID;
 const guildId = process.env.DISCORD_GUILD_ID;
 const port = Number(process.env.PORT ?? 3000);
 
-if (!token || !appId || !process.env.DATABASE_URL) {
-  throw new Error('DISCORD_BOT_TOKEN / DISCORD_APP_ID / DATABASE_URL are required.');
+if (!token || !appId || !process.env.DATABASE_URL || !process.env.REDIS_URL) {
+  throw new Error('DISCORD_BOT_TOKEN / DISCORD_APP_ID / DATABASE_URL / REDIS_URL are required.');
 }
 
 if (process.env.NODE_ENV === 'production') {
@@ -32,6 +33,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 await initSchema();
+await initRedis();
 
 const client = buildClient(token, appId, guildId);
 const app = createApiApp(client);

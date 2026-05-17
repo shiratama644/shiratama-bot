@@ -3,17 +3,19 @@ import type { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import {
-  createIdempotencyRecord,
   getGiveaway,
   getGuildGiveaways,
-  getGuildSettings,
-  getIdempotencyRecord,
-  setIdempotencyGiveawayId
+  getGuildSettings
 } from '../../db/index.js';
 import { AppError } from '../../shared/errors/index.js';
 import { getSessionGuild, requireSession } from '../../features/auth/index.js';
 import { recordAuditEvent } from '../../features/audit/index.js';
 import { createGiveawayPost, endGiveaway, rerollGiveaway } from '../../features/giveaway/index.js';
+import {
+  createIdempotencyRecord,
+  getIdempotencyRecord,
+  setIdempotencyGiveawayId
+} from '../../redis/idempotency.js';
 import { createSchema, guildBodySchema } from '../schemas/giveaway.js';
 import { requireParam, respondError } from '../utils/response.js';
 

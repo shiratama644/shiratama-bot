@@ -1,39 +1,23 @@
 import { randomBytes } from 'node:crypto';
 import {
   consumeStoredOAuthState,
-  deleteExpiredAuthArtifacts,
   deleteStoredAuthSession,
   getStoredAuthSession,
   insertAuthSession,
-  insertOAuthState
-} from '../../db/index.js';
+  storeOAuthState
+} from '../../redis/authStore.js';
 import { AppError } from '../../shared/errors/index.js';
 import { OAUTH_STATE_TTL_MS, SESSION_TTL_MS } from './constants.js';
 import { createSessionCookieHeader, parseCookieToken } from './cookies.js';
 import type { AuthSession } from './types.js';
 
-const AUTH_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-let nextCleanupAt = 0;
-let cleanupInFlight: Promise<void> | null = null;
-
 export async function cleanupExpiredSessions(): Promise<void> {
-  const now = Date.now();
-  if (now < nextCleanupAt) {
-    return;
-  }
-  if (!cleanupInFlight) {
-    cleanupInFlight = deleteExpiredAuthArtifacts(new Date(now))
-      .finally(() => {
-        nextCleanupAt = Date.now() + AUTH_CLEANUP_INTERVAL_MS;
-        cleanupInFlight = null;
-      });
-  }
-  await cleanupInFlight;
+  return Promise.resolve();
 }
 
 export async function createOAuthState(): Promise<string> {
   const state = randomBytes(16).toString('hex');
-  await insertOAuthState(state, new Date(Date.now() + OAUTH_STATE_TTL_MS));
+  await storeOAuthState(state, OAUTH_STATE_TTL_MS);
   return state;
 }
 

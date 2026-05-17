@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { Hono } from 'hono';
+import { getRedis } from '../../redis/client.js';
 
 const CSRF_COOKIE_NAME = 'applejp_csrf_token';
 const CSRF_TOKEN_BYTES = 24;
@@ -13,13 +14,6 @@ const REQUEST_BODY_REQUIRED_PATHS = [
   '/api/giveaways',
   '/api/settings/'
 ] as const;
-
-type RateLimitState = {
-  count: number;
-  resetAt: number;
-};
-
-const rateLimitState = new Map<string, RateLimitState>();
 
 function parseCookie(header: string | undefined, key: string): string | null {
   if (!header) return null;
@@ -65,18 +59,14 @@ function requiresBody(method: string, path: string): boolean {
   return REQUEST_BODY_REQUIRED_PATHS.some((prefix) => path.startsWith(prefix));
 }
 
-function passRateLimit(key: string, limit: number): boolean {
-  const now = Date.now();
-  const existing = rateLimitState.get(key);
-  if (!existing || existing.resetAt <= now) {
-    rateLimitState.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
+async function passRateLimit(key: string, limit: number): Promise<boolean> {
+  const redis = getRedis();
+  const redisKey = `ratelimit:${key}`;
+  const count = await redis.incr(redisKey);
+  if (count === 1) {
+    await redis.pexpire(redisKey, RATE_LIMIT_WINDOW_MS);
   }
-  if (existing.count >= limit) {
-    return false;
-  }
-  existing.count += 1;
-  return true;
+  return count <= limit;
 }
 
 export function registerSecurityMiddleware(app: Hono): void {
@@ -95,8 +85,12 @@ export function registerSecurityMiddleware(app: Hono): void {
     const ip = getClientIp(c.req.header('x-forwarded-for'), c.req.header('x-real-ip'));
     const limitKey = `${ip}:${path}:${method}`;
     const limit = getRateLimit(path, method);
-    if (!passRateLimit(limitKey, limit)) {
-      return c.json({ error: 'Too many requests.' }, 429);
+    try {
+      if (!(await passRateLimit(limitKey, limit))) {
+        return c.json({ error: 'Too many requests.' }, 429);
+      }
+    } catch {
+      return c.json({ error: 'Rate limit service is unavailable.' }, 503);
     }
 
     const contentLength = Number(c.req.header('content-length') ?? '0');
