@@ -35,6 +35,14 @@ export function parseIntervalMs(input: string): number | null {
   return total;
 }
 
+export function parseIntervalSeconds(input: string): number {
+  const intervalMs = parseIntervalMs(input);
+  if (!intervalMs || intervalMs <= 0) {
+    return 0;
+  }
+  return Math.floor(intervalMs / 1000);
+}
+
 export function parseDeadline(input: string): Date {
   const value = input.trim();
   if (!value) {
