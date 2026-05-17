@@ -1,7 +1,7 @@
 # applejp-bot セキュリティリスク一覧（外部公開前チェック）
 
 このドキュメントは、`backend` と `web` の現行実装を確認し、**外部公開時点でリスクになり得る事項を網羅的に列挙**したものです。  
-（確認日: 2026-05-16）
+（確認日: 2026-05-17）
 
 ## 対象範囲
 
@@ -25,7 +25,7 @@
 - **重大度**: High
 - **現状**:
   - 認証は Cookie ベース（`HttpOnly; SameSite=Lax`）だが、状態変更系 API に CSRF トークン検証がない。
-  - 該当: `backend/src/api.ts` (`toCookieHeader`, `/api/settings/:guildId`, `/api/giveaways`, `/api/giveaways/:id/end`, `/api/giveaways/:id/reroll`)
+  - 該当: `backend/src/features/auth/cookies.ts`, `backend/src/api/routes/settings.ts`, `backend/src/api/routes/giveaways.ts`
 - **リスク**:
   - 将来 Cookie 属性変更や同一サイト条件の崩れで、意図しない操作リクエストが成立する余地がある。
 - **推奨対応**:
@@ -36,7 +36,7 @@
 - **重大度**: High
 - **現状**:
   - `/api/auth/login`, `/api/auth/callback`, `/api/giveaways` などにレート制限がない。
-  - 該当: `backend/src/api.ts`
+  - 該当: `backend/src/api/routes/auth.ts`, `backend/src/api/routes/giveaways.ts`
 - **リスク**:
   - 外部公開後に連打・ボットアクセスで Discord API / DB / Bot 処理が過負荷化し、可用性低下。
 - **推奨対応**:
@@ -48,7 +48,7 @@
 - **現状**:
   - API が `Error.message` をそのままクライアント返却する。
   - Discord Interaction でも `Error.message` をユーザーに表示する。
-  - 該当: `backend/src/errors.ts` (`getErrorMessage`), `backend/src/api.ts` (`respondError`), `backend/src/interactions/index.ts`
+  - 該当: `backend/src/shared/errors/index.ts` (`getErrorMessage`), `backend/src/api/utils/response.ts` (`respondError`), `backend/src/features/giveaway/interactions/index.ts`
 - **リスク**:
   - 実装詳細・内部状態・外部連携失敗の詳細が攻撃者の足がかりになる。
 - **推奨対応**:
@@ -60,7 +60,7 @@
 - **現状**:
   - 明示的なセキュリティヘッダー設定がない。
   - `web/next.config.ts` に header 設定なし。
-  - `backend/src/api.ts` も CORS 以外のヘッダーを付与していない。
+  - `backend/src/api/middleware/cors.ts` でも CORS 以外のヘッダーは付与していない。
 - **リスク**:
   - クリックジャッキング、不要な参照元送信、将来の XSS 被害拡大を防ぎにくい。
 - **推奨対応**:
@@ -70,7 +70,7 @@
 - **重大度**: Medium
 - **現状**:
   - `Secure` は `NODE_ENV === 'production'` のときのみ付与。
-  - 該当: `backend/src/api.ts` (`toCookieHeader`, `clearCookieHeader`)
+  - 該当: `backend/src/features/auth/cookies.ts` (`createSessionCookieHeader`, `clearCookieHeader`)
 - **リスク**:
   - 本番環境でも環境変数誤設定時に Secure なし Cookie が発行される。
 - **推奨対応**:
@@ -81,7 +81,7 @@
 - **重大度**: Medium
 - **現状**:
   - `sessionStore` と `oauthStateStore` が `Map` 実装（単一プロセス内）。
-  - 該当: `backend/src/api.ts`
+  - 該当: `backend/src/features/auth/sessionStore.ts`
 - **リスク**:
   - 再起動・スケールアウトで認証状態が不整合。
   - 多インスタンス公開時に想定外の認証失敗や運用障害が起きやすい。
@@ -93,7 +93,7 @@
 - **重大度**: Medium
 - **現状**:
   - `giveawayCreatorRoleIds` が空の場合、`assertCanManageGiveaways` が許可扱いになる。
-  - 該当: `backend/src/commands/permissions.ts`
+  - 該当: `backend/src/features/giveaway/permissions.ts`
 - **リスク**:
   - 初期設定不備時、サーバー参加者が Giveaway 管理コマンドを実行できる可能性。
 - **推奨対応**:
@@ -105,7 +105,7 @@
 - **現状**:
   - `getGuildMembers` で全メンバー取得し、`/api/guilds/:guildId/options` で返却。
   - 返却データに `id`, `name`, `avatarUrl` を含む。
-  - 該当: `backend/src/api.ts`
+  - 該当: `backend/src/api/routes/guilds.ts`, `backend/src/discord/bot.ts`
 - **リスク**:
   - 大規模サーバーで高負荷化。
   - ダッシュボード権限者へ不要なユーザー情報を広く開示。
@@ -128,7 +128,7 @@
 - **重大度**: Medium
 - **現状**:
   - コンソールログはあるが、誰が何を変更したかの永続監査ログがない。
-  - 該当: `backend/src/utils/logger.ts`, 各 API/Command 実装
+  - 該当: `backend/src/shared/logger/index.ts`, 各 API/Command 実装
 - **リスク**:
   - 事故時の原因追跡・不正操作調査が困難。
 - **推奨対応**:
@@ -138,7 +138,7 @@
 - **重大度**: Low
 - **現状**:
   - `title`, `description`, `deadline` などに実用的な最大長制約がない。
-  - 該当: `backend/src/api.ts` (`createSchema`), `backend/src/giveaway/service.ts`
+  - 該当: `backend/src/api/schemas/giveaway.ts` (`createSchema`), `backend/src/features/giveaway/service.ts`
 - **リスク**:
   - 極端に大きい入力により Discord API 失敗や処理負荷増大を招く。
 - **推奨対応**:
@@ -148,7 +148,7 @@
 - **重大度**: Low
 - **現状**:
   - `pickWinners` が `Math.random()` を使用。
-  - 該当: `backend/src/giveaway/service.ts`
+  - 該当: `backend/src/features/giveaway/service.ts`
 - **リスク**:
   - 厳密な公平性監査が必要な用途では、予測耐性が不十分。
 - **推奨対応**:
