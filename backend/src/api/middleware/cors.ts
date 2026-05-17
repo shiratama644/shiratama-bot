@@ -14,7 +14,7 @@ export function registerCorsMiddleware(app: Hono): void {
         c.header('Access-Control-Allow-Origin', allowedOrigin);
         c.header('Access-Control-Allow-Credentials', 'true');
         c.header('Vary', 'Origin');
-        c.header('Access-Control-Allow-Headers', 'Content-Type');
+        c.header('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token');
         c.header('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
       }
       return c.body(null, 200);
@@ -26,7 +26,7 @@ export function registerCorsMiddleware(app: Hono): void {
       c.header('Access-Control-Allow-Origin', allowedOrigin);
       c.header('Access-Control-Allow-Credentials', 'true');
       c.header('Vary', 'Origin');
-      c.header('Access-Control-Allow-Headers', 'Content-Type');
+      c.header('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token');
       c.header('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS');
     }
   });

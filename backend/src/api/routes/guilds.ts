@@ -1,5 +1,6 @@
 import {
   ChannelType,
+  GatewayIntentBits,
   type Client,
   type Guild
 } from 'discord.js';
@@ -25,22 +26,36 @@ function toUserSummary(user: {
   };
 }
 
-async function getGuildMembers(guild: Guild): Promise<Array<{ id: string; name: string; avatarUrl: string }>> {
-  try {
-    const members = await guild.members.fetch();
-    return members
-      .map((member) => toUserSummary(member.user))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  } catch {
-    const owner = await guild.fetchOwner().catch(() => null);
-    if (!owner) {
-      return [];
-    }
-    return [toUserSummary(owner.user)];
+async function getGuildMembers(guild: Guild, canFetchAllMembers: boolean): Promise<Array<{ id: string; name: string; avatarUrl: string }>> {
+  const dedup = new Map<string, { id: string; name: string; avatarUrl: string }>();
+  const add = (entry: { id: string; name: string; avatarUrl: string }) => {
+    dedup.set(entry.id, entry);
+  };
+
+  const owner = await guild.fetchOwner().catch(() => null);
+  if (owner) {
+    add(toUserSummary(owner.user));
   }
+
+  if (!canFetchAllMembers) {
+    return [...dedup.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  try {
+    const members = await guild.members.fetch({ limit: 200 });
+    for (const member of members.values()) {
+      add(toUserSummary(member.user));
+    }
+  } catch {
+    return [...dedup.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return [...dedup.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function registerGuildRoutes(app: Hono, client: Client): void {
+  const canFetchAllMembers = client.options.intents.has(GatewayIntentBits.GuildMembers);
+
   app.get('/api/guilds', (c) => {
     try {
       const session = requireSession(c);
@@ -80,7 +95,7 @@ export function registerGuildRoutes(app: Hono, client: Client): void {
         .map((channel) => ({ id: channel.id, name: channel.name }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-      const members = await getGuildMembers(guild);
+      const members = await getGuildMembers(guild, canFetchAllMembers);
 
       return c.json({
         guild: {

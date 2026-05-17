@@ -1,0 +1,113 @@
+import { randomBytes } from 'node:crypto';
+import type { Hono } from 'hono';
+
+const CSRF_COOKIE_NAME = 'applejp_csrf_token';
+const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_AUTH = 30;
+const RATE_LIMIT_MAX_MUTATION = 120;
+const MAX_REQUEST_BODY_BYTES = 50 * 1024;
+
+type RateLimitState = {
+  count: number;
+  resetAt: number;
+};
+
+const rateLimitState = new Map<string, RateLimitState>();
+
+function parseCookie(header: string | undefined, key: string): string | null {
+  if (!header) return null;
+  for (const part of header.split(';')) {
+    const [name, value] = part.trim().split('=');
+    if (name === key && value) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function getClientIp(forwardedFor: string | undefined, realIp: string | undefined): string {
+  const xff = forwardedFor?.split(',')[0]?.trim();
+  return xff || realIp || 'unknown';
+}
+
+function shouldUseSecureCookie(c: { req: { header: (key: string) => string | undefined } }): boolean {
+  if (process.env.NODE_ENV === 'production') {
+    return true;
+  }
+  const proto = c.req.header('x-forwarded-proto')?.toLowerCase();
+  return proto === 'https';
+}
+
+function getRateLimit(path: string, method: string): number {
+  if (path.startsWith('/api/auth/login') || path.startsWith('/api/auth/callback')) {
+    return RATE_LIMIT_MAX_AUTH;
+  }
+  if (STATE_CHANGING_METHODS.has(method)) {
+    return RATE_LIMIT_MAX_MUTATION;
+  }
+  return RATE_LIMIT_MAX_MUTATION * 2;
+}
+
+function passRateLimit(key: string, limit: number): boolean {
+  const now = Date.now();
+  const existing = rateLimitState.get(key);
+  if (!existing || existing.resetAt <= now) {
+    rateLimitState.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (existing.count >= limit) {
+    return false;
+  }
+  existing.count += 1;
+  return true;
+}
+
+export function registerSecurityMiddleware(app: Hono): void {
+  app.use('/api/*', async (c, next) => {
+    c.header('X-Frame-Options', 'DENY');
+    c.header('X-Content-Type-Options', 'nosniff');
+    c.header('Referrer-Policy', 'no-referrer');
+    c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    c.header('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
+    if (process.env.NODE_ENV === 'production') {
+      c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    }
+
+    const method = c.req.method.toUpperCase();
+    const path = c.req.path;
+    const ip = getClientIp(c.req.header('x-forwarded-for'), c.req.header('x-real-ip'));
+    const limitKey = `${ip}:${path}:${method}`;
+    const limit = getRateLimit(path, method);
+    if (!passRateLimit(limitKey, limit)) {
+      return c.json({ error: 'Too many requests.' }, 429);
+    }
+
+    const contentLength = Number(c.req.header('content-length') ?? '0');
+    if (!Number.isNaN(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
+      return c.json({ error: 'Request payload too large.' }, 413);
+    }
+
+    const allowedOrigin = process.env.CORS_ORIGIN;
+    const requestOrigin = c.req.header('origin');
+    if (STATE_CHANGING_METHODS.has(method) && allowedOrigin && requestOrigin !== allowedOrigin) {
+      return c.json({ error: 'Invalid request origin.' }, 403);
+    }
+
+    const cookieHeader = c.req.header('cookie');
+    let csrfToken = parseCookie(cookieHeader, CSRF_COOKIE_NAME);
+    if (!csrfToken) {
+      csrfToken = randomBytes(24).toString('hex');
+      const secure = shouldUseSecureCookie(c) ? '; Secure' : '';
+      c.header('Set-Cookie', `${CSRF_COOKIE_NAME}=${csrfToken}; Path=/; SameSite=Lax${secure}`);
+    }
+    if (STATE_CHANGING_METHODS.has(method)) {
+      const requestToken = c.req.header('x-csrf-token');
+      if (!requestToken || requestToken !== csrfToken) {
+        return c.json({ error: 'CSRF token is missing or invalid.' }, 403);
+      }
+    }
+
+    await next();
+  });
+}

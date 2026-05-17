@@ -1,4 +1,5 @@
-import { AppError, getErrorMessage, getErrorStatusCode } from '../../shared/errors/index.js';
+import { AppError, getErrorMessage, getErrorStatusCode, getPublicErrorMessage } from '../../shared/errors/index.js';
+import { logger } from '../../shared/logger/index.js';
 
 export function requireParam(value: string | undefined, key: string): string {
   if (!value) {
@@ -14,5 +15,7 @@ type ErrorResponseContext = {
 };
 
 export function respondError(c: ErrorResponseContext, error: unknown) {
-  return c.json({ error: getErrorMessage(error) }, getErrorStatusCode(error) as ApiErrorStatus);
+  const statusCode = getErrorStatusCode(error) as ApiErrorStatus;
+  logger.error('API request failed', { statusCode, error: getErrorMessage(error), rawError: error });
+  return c.json({ error: getPublicErrorMessage(statusCode) }, statusCode);
 }

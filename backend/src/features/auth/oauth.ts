@@ -63,10 +63,12 @@ export async function createSessionFromOAuth(client: Client, accessToken: string
     if (!member) {
       continue;
     }
+    const permissionBits = BigInt(oauthGuild.permissions);
+    const hasAdministratorPermission = (permissionBits & 0x8n) === 0x8n;
     const hasDashboardRole = settings.dashboardUsableRoleIds.some((roleId) => member.roles.cache.has(roleId));
-    const hasCreatorRole =
-      settings.giveawayCreatorRoleIds.length === 0 ||
-      settings.giveawayCreatorRoleIds.some((roleId) => member.roles.cache.has(roleId));
+    const hasCreatorRole = settings.giveawayCreatorRoleIds.length === 0
+      ? (oauthGuild.owner || hasAdministratorPermission)
+      : settings.giveawayCreatorRoleIds.some((roleId) => member.roles.cache.has(roleId));
 
     guilds.push({
       id: guild.id,

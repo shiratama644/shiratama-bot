@@ -10,13 +10,14 @@ import type { GiveawayStatus } from '../../shared/types/common.js';
 import { DEFAULT_LANGUAGE, t } from '../../shared/i18n/index.js';
 
 export function parseDurationSeconds(duration: string): number {
-  const match = duration.trim().match(/^(\d+)(m|h|d)$/i);
+  const match = duration.trim().match(/^(\d+)(m|h|d|w)$/i);
   if (!match) return 0;
   const amount = Number(match[1]);
   const unit = match[2].toLowerCase();
   if (unit === 'm') return amount * 60;
   if (unit === 'h') return amount * 3600;
   if (unit === 'd') return amount * 86400;
+  if (unit === 'w') return amount * 604800;
   return 0;
 }
 

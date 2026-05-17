@@ -3,7 +3,6 @@ import { handleModalSubmit } from './modalSubmit.js';
 import { handleButton } from './button.js';
 import { commands } from '../commands/index.js';
 import { logger } from '../../../shared/logger/index.js';
-import { getErrorMessage } from '../../../shared/errors/index.js';
 import { getGuildSettings } from '../../../db/index.js';
 import { DEFAULT_LANGUAGE, t } from '../../../shared/i18n/index.js';
 
@@ -36,13 +35,12 @@ export async function handleInteraction(client: Client, interaction: Interaction
     }
   } catch (error) {
     logger.error('Interaction error:', error);
-    const message = getErrorMessage(error);
     const settings = interaction.guildId ? await getGuildSettings(interaction.guildId).catch(() => null) : null;
     const language = settings?.language ?? DEFAULT_LANGUAGE;
     const embed = new EmbedBuilder()
       .setColor(Colors.Red)
       .setTitle(t(language, 'errorTitle'))
-      .setDescription(message);
+      .setDescription(t(language, 'operationFailedTryAgain'));
     if (interaction.isRepliable()) {
       if (interaction.deferred || interaction.replied) {
         await interaction.followUp({ embeds: [embed], ephemeral: true });

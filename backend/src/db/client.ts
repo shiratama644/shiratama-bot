@@ -11,11 +11,21 @@ let db: Kysely<Database> | null = null;
 export function getDb(): Kysely<Database> {
   if (db === null) {
     const connectionString = process.env.DATABASE_URL;
+    const sslMode = process.env.DATABASE_SSL_MODE ?? (process.env.NODE_ENV === 'production' ? 'require' : 'prefer');
     if (!connectionString) {
       logger.error('DATABASE_URL is not defined in environment variables');
       throw new AppError('DATABASE_URL environment variable is not configured.', 500);
     }
-    pool = new Pool({ connectionString });
+    if (process.env.NODE_ENV === 'production' && sslMode !== 'require') {
+      throw new AppError('DATABASE_SSL_MODE must be "require" in production.', 500);
+    }
+    const shouldRequireSsl = sslMode === 'require';
+    pool = new Pool({
+      connectionString,
+      ssl: shouldRequireSsl
+        ? { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false' }
+        : undefined
+    });
     pool.on('error', (err) => {
       logger.error('Unexpected error on idle database client', err);
     });

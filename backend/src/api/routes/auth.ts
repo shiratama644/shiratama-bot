@@ -1,6 +1,6 @@
 import type { Client } from 'discord.js';
 import type { Hono } from 'hono';
-import { AppError, getErrorMessage } from '../../shared/errors/index.js';
+import { AppError, getErrorStatusCode, getPublicErrorMessage } from '../../shared/errors/index.js';
 import {
   buildRedirectUri,
   cleanupExpiredSessions,
@@ -82,7 +82,8 @@ export function registerAuthRoutes(app: Hono, client: Client): void {
     } catch (error) {
       const webBaseUrl = (process.env.WEB_BASE_URL ?? process.env.APP_BASE_URL ?? '').replace(/\/$/, '');
       if (webBaseUrl) {
-        return c.redirect(`${webBaseUrl}/?authError=${encodeURIComponent(getErrorMessage(error))}`, 302);
+        const statusCode = getErrorStatusCode(error);
+        return c.redirect(`${webBaseUrl}/?authError=${encodeURIComponent(getPublicErrorMessage(statusCode))}`, 302);
       }
       return respondError(c, error);
     }

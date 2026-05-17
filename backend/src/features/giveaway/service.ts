@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -47,7 +48,7 @@ function pickWinners(participants: string[], winnerCount: number): string[] {
   const copied = [...participants];
   const winners: string[] = [];
   while (copied.length > 0 && winners.length < winnerCount) {
-    const index = Math.floor(Math.random() * copied.length);
+    const index = randomInt(0, copied.length);
     winners.push(copied[index]);
     copied.splice(index, 1);
   }
