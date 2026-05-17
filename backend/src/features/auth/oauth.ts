@@ -32,21 +32,12 @@ async function mapWithConcurrency<T, R>(
   mapper: (item: T, index: number) => Promise<R>
 ): Promise<R[]> {
   const safeConcurrency = Math.max(1, concurrency);
-  const results: R[] = new Array(items.length);
-  let index = 0;
-
-  async function worker(): Promise<void> {
-    while (true) {
-      const currentIndex = index;
-      index += 1;
-      if (currentIndex >= items.length) {
-        return;
-      }
-      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
-    }
+  const results: R[] = [];
+  for (let start = 0; start < items.length; start += safeConcurrency) {
+    const batch = items.slice(start, start + safeConcurrency);
+    const batchResults = await Promise.all(batch.map((item, offset) => mapper(item, start + offset)));
+    results.push(...batchResults);
   }
-
-  await Promise.all(Array.from({ length: Math.min(safeConcurrency, items.length) }, () => worker()));
   return results;
 }
 
