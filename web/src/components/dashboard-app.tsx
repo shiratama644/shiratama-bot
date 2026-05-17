@@ -18,6 +18,7 @@ import {
   endGiveaway,
   fetchAuthSession,
   fetchGuildOptions,
+  fetchGiveawayUsers,
   fetchGiveaways,
   fetchSettings,
   getLoginUrl,
@@ -169,6 +170,17 @@ function DashboardContent({
     enabled: Boolean(activeGuildId && sessionQuery.data)
   });
 
+  const giveawayUserIds = useMemo(
+    () => [...new Set((giveawaysQuery.data ?? []).flatMap((giveaway) => [giveaway.createdBy, ...giveaway.winners]))],
+    [giveawaysQuery.data]
+  );
+
+  const giveawayUsersQuery = useQuery({
+    queryKey: ['giveaway-users', activeGuildId, giveawayUserIds.join(',')],
+    queryFn: () => fetchGiveawayUsers(activeGuildId as string, giveawayUserIds),
+    enabled: Boolean(activeGuildId && sessionQuery.data && giveawayUserIds.length > 0)
+  });
+
   const roleOptions = useMemo<SelectOption[]>(
     () =>
       (optionsQuery.data?.roles ?? []).map((role) => ({
@@ -192,6 +204,11 @@ function DashboardContent({
   const channelMap = useMemo(
     () => new Map((optionsQuery.data?.channels ?? []).map((channel) => [channel.id, channel])),
     [optionsQuery.data?.channels]
+  );
+
+  const giveawayUserMap = useMemo(
+    () => new Map((giveawayUsersQuery.data ?? []).map((user) => [user.id, user])),
+    [giveawayUsersQuery.data]
   );
 
   const settingsSeed = useMemo<SettingsDraft | null>(() => {
@@ -347,7 +364,8 @@ function DashboardContent({
       return rerollGiveaway(giveawayId, activeGuildId);
     },
     onSuccess: (result) => {
-      alert(`再抽選完了: ${result.winners.join(', ')}`);
+      const winnerNames = result.winners.map((winnerId) => giveawayUserMap.get(winnerId)?.name ?? winnerId);
+      alert(`再抽選完了: ${winnerNames.join(', ')}`);
     }
   });
 
@@ -787,6 +805,12 @@ function DashboardContent({
             <div className="space-y-3">
               {filteredGiveaways.map((giveaway) => {
                 const channel = channelMap.get(giveaway.channelId);
+                const creator = giveawayUserMap.get(giveaway.createdBy);
+                const winners = giveaway.winners.map((winnerId) => giveawayUserMap.get(winnerId) ?? {
+                  id: winnerId,
+                  name: winnerId,
+                  avatarUrl: ''
+                });
                 const claimState = getClaimState(giveaway);
                 const statusLabel =
                   giveaway.status === 'active'
@@ -816,15 +840,28 @@ function DashboardContent({
                       <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1">🏅 当選数 {giveaway.winnerCount}</span>
                     </div>
                     <div className="mt-2 text-sm">
-                      <span className="text-slate-500">作成者 ID:</span> {giveaway.createdBy}
+                      <span className="text-slate-500">作成者:</span>{' '}
+                      {creator ? (
+                        <span className="inline-flex items-center gap-1">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={creator.avatarUrl} alt="" className="h-4 w-4 rounded-full" />
+                          {creator.name}
+                        </span>
+                      ) : (
+                        giveaway.createdBy
+                      )}
                     </div>
                     <div className="mt-2 text-sm">
                       <span className="text-slate-500">当選者:</span>{' '}
-                      {giveaway.winners.length > 0 ? (
+                      {winners.length > 0 ? (
                         <span className="inline-flex flex-wrap items-center gap-2">
-                          {giveaway.winners.map((winnerId) => (
-                            <span key={winnerId} className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-1">
-                              {winnerId}
+                          {winners.map((winner) => (
+                            <span key={winner.id} className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-1">
+                              {winner.avatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={winner.avatarUrl} alt="" className="h-4 w-4 rounded-full" />
+                              ) : null}
+                              {winner.name}
                             </span>
                           ))}
                         </span>
@@ -867,9 +904,9 @@ function DashboardContent({
         </div>
       ) : null}
 
-      {(optionsQuery.error || settingsQuery.error || giveawaysQuery.error) ? (
+      {(optionsQuery.error || settingsQuery.error || giveawaysQuery.error || giveawayUsersQuery.error) ? (
         <div className="fixed bottom-4 left-4 max-w-sm rounded-md bg-rose-100 px-3 py-2 text-xs text-rose-700">
-          {String(optionsQuery.error ?? settingsQuery.error ?? giveawaysQuery.error)}
+          {String(optionsQuery.error ?? settingsQuery.error ?? giveawaysQuery.error ?? giveawayUsersQuery.error)}
         </div>
       ) : null}
     </div>

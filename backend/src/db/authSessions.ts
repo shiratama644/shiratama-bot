@@ -1,14 +1,24 @@
 import { getDb, runDb } from './client.js';
+import { z } from 'zod';
 import type { AuthGuild } from '../features/auth/types.js';
 
-type AuthSessionPayload = {
-  user: {
-    id: string;
-    name: string;
-    avatarUrl: string;
-  };
-  guilds: AuthGuild[];
-};
+const authSessionPayloadSchema = z.object({
+  user: z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    avatarUrl: z.string().min(1)
+  }),
+  guilds: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    iconUrl: z.string().nullable(),
+    canUseDashboard: z.boolean(),
+    canCreateGiveaway: z.boolean(),
+    isOwner: z.boolean()
+  }))
+});
+
+type AuthSessionPayload = z.infer<typeof authSessionPayloadSchema>;
 
 export async function deleteExpiredAuthArtifacts(now: Date): Promise<void> {
   await runDb(async () => {
@@ -90,11 +100,30 @@ export async function getStoredAuthSession(token: string): Promise<{
       return null;
     }
 
-    const payload = JSON.parse(row.session_json) as AuthSessionPayload;
+    let rawPayload: unknown;
+    try {
+      rawPayload = JSON.parse(row.session_json);
+    } catch {
+      await getDb()
+        .deleteFrom('auth_sessions')
+        .where('token', '=', token)
+        .execute();
+      return null;
+    }
+
+    const parsedPayload = authSessionPayloadSchema.safeParse(rawPayload);
+    if (!parsedPayload.success) {
+      await getDb()
+        .deleteFrom('auth_sessions')
+        .where('token', '=', token)
+        .execute();
+      return null;
+    }
+
     return {
       token: row.token,
-      user: payload.user,
-      guilds: payload.guilds,
+      user: parsedPayload.data.user,
+      guilds: parsedPayload.data.guilds as AuthGuild[],
       expiresAt: row.expires_at.getTime()
     };
   }, 'getStoredAuthSession');

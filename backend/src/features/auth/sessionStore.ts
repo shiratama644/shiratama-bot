@@ -12,8 +12,23 @@ import { OAUTH_STATE_TTL_MS, SESSION_TTL_MS } from './constants.js';
 import { createSessionCookieHeader, parseCookieToken } from './cookies.js';
 import type { AuthSession } from './types.js';
 
+const AUTH_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+let nextCleanupAt = 0;
+let cleanupInFlight: Promise<void> | null = null;
+
 export async function cleanupExpiredSessions(): Promise<void> {
-  await deleteExpiredAuthArtifacts(new Date());
+  const now = Date.now();
+  if (now < nextCleanupAt) {
+    return;
+  }
+  if (!cleanupInFlight) {
+    cleanupInFlight = deleteExpiredAuthArtifacts(new Date(now))
+      .finally(() => {
+        nextCleanupAt = Date.now() + AUTH_CLEANUP_INTERVAL_MS;
+        cleanupInFlight = null;
+      });
+  }
+  await cleanupInFlight;
 }
 
 export async function createOAuthState(): Promise<string> {

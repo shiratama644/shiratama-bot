@@ -65,7 +65,7 @@
 - **状態**: 対応済み
 - **実装**:
   - `backend/src/api/routes/guilds.ts` はチャンネル / ロール / ギルド概要のみ返却し、メンバー一覧を返さない。
-  - `web/src/components/dashboard-app.tsx` もメンバー全件取得に依存しない表示へ変更。
+  - `backend/src/api/routes/giveaways.ts` は Giveaway の作成者 / 当選者として既に関連する user ID だけを対象に限定プロフィール取得を行い、`web/src/components/dashboard-app.tsx` はその限定データだけで表示する。
 
 ### 9) DB 接続の暗号化要件がコードで強制されていない
 - **状態**: 対応済み

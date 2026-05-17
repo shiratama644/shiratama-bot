@@ -1,6 +1,7 @@
 import type { Client } from 'discord.js';
 import type { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import {
   createIdempotencyRecord,
   getGiveaway,
@@ -17,6 +18,47 @@ import { createSchema, guildBodySchema } from '../schemas/giveaway.js';
 import { requireParam, respondError } from '../utils/response.js';
 
 const IDEMPOTENCY_KEY_MAX_LENGTH = 128;
+const MAX_GIVEAWAY_USER_LOOKUP_IDS = 100;
+const giveawayUserLookupSchema = z.object({
+  ids: z
+    .string()
+    .transform((value) => value.split(',').map((item) => item.trim()).filter(Boolean))
+    .refine((ids) => ids.length > 0, 'At least one user id is required.')
+    .refine((ids) => ids.length <= MAX_GIVEAWAY_USER_LOOKUP_IDS, 'Too many user ids requested.')
+});
+
+async function resolveGiveawayUsers(client: Client, guildId: string, userIds: string[]) {
+  const requestedIds = [...new Set(userIds)];
+  if (requestedIds.length === 0) {
+    return [];
+  }
+
+  const giveaways = await getGuildGiveaways(guildId);
+  const allowedIds = new Set<string>();
+  for (const giveaway of giveaways) {
+    allowedIds.add(giveaway.createdBy);
+    for (const winnerId of giveaway.winners) {
+      allowedIds.add(winnerId);
+    }
+  }
+
+  const visibleIds = requestedIds.filter((id) => allowedIds.has(id));
+  const users = await Promise.all(
+    visibleIds.map(async (id) => {
+      const user = await client.users.fetch(id).catch(() => null);
+      if (!user) {
+        return null;
+      }
+      return {
+        id: user.id,
+        name: user.globalName ?? user.username,
+        avatarUrl: user.displayAvatarURL({ size: 64, extension: 'png' })
+      };
+    })
+  );
+
+  return users.filter((user): user is NonNullable<typeof user> => user !== null);
+}
 
 async function resolveIdempotentGiveaway(
   key: string,
@@ -44,6 +86,21 @@ export function registerGiveawayRoutes(app: Hono, client: Client): void {
       getSessionGuild(session, guildId);
       const giveaways = await getGuildGiveaways(guildId);
       return c.json({ giveaways });
+    } catch (error) {
+      return respondError(c, error);
+    }
+  });
+
+  app.get('/api/giveaways/:guildId/users', async (c) => {
+    try {
+      const guildId = requireParam(c.req.param('guildId'), 'guildId');
+      const session = await requireSession(c);
+      getSessionGuild(session, guildId);
+      const query = giveawayUserLookupSchema.parse({
+        ids: c.req.query('ids') ?? ''
+      });
+      const users = await resolveGiveawayUsers(client, guildId, query.ids);
+      return c.json({ users });
     } catch (error) {
       return respondError(c, error);
     }

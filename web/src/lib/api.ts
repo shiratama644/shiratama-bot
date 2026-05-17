@@ -1,6 +1,7 @@
 export type GuildSummary = { id: string; name: string; iconUrl: string | null };
 export type RoleSummary = { id: string; name: string };
 export type ChannelSummary = { id: string; name: string };
+export type GiveawayUserSummary = { id: string; name: string; avatarUrl: string };
 
 export type AuthGuild = GuildSummary & {
   canUseDashboard: boolean;
@@ -133,6 +134,17 @@ export async function updateSettings(
 export async function fetchGiveaways(guildId: string) {
   const payload = await apiFetch<{ giveaways: Giveaway[] }>(`/api/giveaways/${guildId}`);
   return payload.giveaways;
+}
+
+export async function fetchGiveawayUsers(guildId: string, userIds: string[]) {
+  const ids = [...new Set(userIds)].filter(Boolean);
+  if (ids.length === 0) {
+    return [] as GiveawayUserSummary[];
+  }
+  const payload = await apiFetch<{ users: GiveawayUserSummary[] }>(
+    `/api/giveaways/${guildId}/users?ids=${encodeURIComponent(ids.join(','))}`
+  );
+  return payload.users;
 }
 
 export async function createGiveaway(input: {
