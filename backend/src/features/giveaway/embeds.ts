@@ -10,10 +10,6 @@ import type { GiveawayStatus } from '../../shared/types/common.js';
 import { DEFAULT_LANGUAGE, t } from '../../shared/i18n/index.js';
 import { parseIntervalSeconds } from '../../shared/utils/deadline.js';
 
-export function parseDurationSeconds(duration: string): number {
-  return parseIntervalSeconds(duration);
-}
-
 export function giveawayButtons(giveawayId: string, disabled = false, language: string = DEFAULT_LANGUAGE): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
@@ -73,7 +69,7 @@ export function giveawayEmbed(params: {
     : null;
   if (effectiveClaimDeadline) {
     if (isEnded) {
-      const claimDeadlineSecs = parseDurationSeconds(effectiveClaimDeadline);
+      const claimDeadlineSecs = parseIntervalSeconds(effectiveClaimDeadline);
       const claimDeadlineTs = endTimestamp + claimDeadlineSecs;
       descLines.push(`⏰ **${t(language, 'claimDeadline')}:** <t:${claimDeadlineTs}:R> (<t:${claimDeadlineTs}:f>)`);
     } else {
