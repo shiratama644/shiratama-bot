@@ -1,7 +1,6 @@
 export type GuildSummary = { id: string; name: string; iconUrl: string | null };
 export type RoleSummary = { id: string; name: string };
 export type ChannelSummary = { id: string; name: string };
-export type MemberSummary = { id: string; name: string; avatarUrl: string };
 
 export type AuthGuild = GuildSummary & {
   canUseDashboard: boolean;
@@ -18,7 +17,6 @@ export type GuildOptions = {
   guild: GuildSummary;
   roles: RoleSummary[];
   channels: ChannelSummary[];
-  members: MemberSummary[];
 };
 
 export type GuildSettings = {

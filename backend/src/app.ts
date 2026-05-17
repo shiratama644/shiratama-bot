@@ -16,6 +16,9 @@ if (!token || !appId || !process.env.DATABASE_URL) {
 }
 
 if (process.env.NODE_ENV === 'production') {
+  if (process.env.COOKIE_SECURE === 'false') {
+    throw new Error('COOKIE_SECURE cannot be disabled in production.');
+  }
   const requiredHttpsUrls = [
     { key: 'APP_BASE_URL', value: process.env.APP_BASE_URL },
     { key: 'WEB_BASE_URL', value: process.env.WEB_BASE_URL },

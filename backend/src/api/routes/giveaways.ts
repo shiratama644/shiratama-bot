@@ -40,7 +40,7 @@ export function registerGiveawayRoutes(app: Hono, client: Client): void {
   app.get('/api/giveaways/:guildId', async (c) => {
     try {
       const guildId = requireParam(c.req.param('guildId'), 'guildId');
-      const session = requireSession(c);
+      const session = await requireSession(c);
       getSessionGuild(session, guildId);
       const giveaways = await getGuildGiveaways(guildId);
       return c.json({ giveaways });
@@ -51,7 +51,7 @@ export function registerGiveawayRoutes(app: Hono, client: Client): void {
 
   app.post('/api/giveaways', zValidator('json', createSchema), async (c) => {
     try {
-      const session = requireSession(c);
+      const session = await requireSession(c);
       const body = c.req.valid('json');
       const idempotencyKey = c.req.header('idempotency-key')?.trim() ?? '';
       if (idempotencyKey && idempotencyKey.length > IDEMPOTENCY_KEY_MAX_LENGTH) {
@@ -119,7 +119,7 @@ export function registerGiveawayRoutes(app: Hono, client: Client): void {
 
   app.post('/api/giveaways/:id/end', zValidator('json', guildBodySchema), async (c) => {
     try {
-      const session = requireSession(c);
+      const session = await requireSession(c);
       const guildId = c.req.valid('json').guildId;
       getSessionGuild(session, guildId);
       const id = requireParam(c.req.param('id'), 'id');
@@ -146,7 +146,7 @@ export function registerGiveawayRoutes(app: Hono, client: Client): void {
 
   app.post('/api/giveaways/:id/reroll', zValidator('json', guildBodySchema), async (c) => {
     try {
-      const session = requireSession(c);
+      const session = await requireSession(c);
       const guildId = c.req.valid('json').guildId;
       getSessionGuild(session, guildId);
       const id = requireParam(c.req.param('id'), 'id');

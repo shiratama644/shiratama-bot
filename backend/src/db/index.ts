@@ -35,3 +35,11 @@ export {
   createIdempotencyRecord,
   setIdempotencyGiveawayId
 } from './idempotencyKeys.js';
+export {
+  consumeStoredOAuthState,
+  deleteExpiredAuthArtifacts,
+  deleteStoredAuthSession,
+  getStoredAuthSession,
+  insertAuthSession,
+  insertOAuthState
+} from './authSessions.js';

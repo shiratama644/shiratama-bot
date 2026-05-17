@@ -189,11 +189,6 @@ function DashboardContent({
     [optionsQuery.data?.channels]
   );
 
-  const memberMap = useMemo(
-    () => new Map((optionsQuery.data?.members ?? []).map((member) => [member.id, member])),
-    [optionsQuery.data?.members]
-  );
-
   const channelMap = useMemo(
     () => new Map((optionsQuery.data?.channels ?? []).map((channel) => [channel.id, channel])),
     [optionsQuery.data?.channels]
@@ -352,8 +347,7 @@ function DashboardContent({
       return rerollGiveaway(giveawayId, activeGuildId);
     },
     onSuccess: (result) => {
-      const winnerNames = result.winners.map((winnerId) => memberMap.get(winnerId)?.name ?? 'Unknown user');
-      alert(`再抽選完了: ${winnerNames.join(', ')}`);
+      alert(`再抽選完了: ${result.winners.join(', ')}`);
     }
   });
 
@@ -792,8 +786,6 @@ function DashboardContent({
             </div>
             <div className="space-y-3">
               {filteredGiveaways.map((giveaway) => {
-                const creator = memberMap.get(giveaway.createdBy);
-                const winners = giveaway.winners.map((winnerId) => memberMap.get(winnerId)).filter(Boolean);
                 const channel = channelMap.get(giveaway.channelId);
                 const claimState = getClaimState(giveaway);
                 const statusLabel =
@@ -824,26 +816,15 @@ function DashboardContent({
                       <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-1">🏅 当選数 {giveaway.winnerCount}</span>
                     </div>
                     <div className="mt-2 text-sm">
-                      <span className="text-slate-500">作成者:</span>{' '}
-                      {creator ? (
-                        <span className="inline-flex items-center gap-1">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={creator.avatarUrl} alt="" className="h-4 w-4 rounded-full" />
-                          {creator.name}
-                        </span>
-                      ) : (
-                        '不明なユーザー'
-                      )}
+                      <span className="text-slate-500">作成者 ID:</span> {giveaway.createdBy}
                     </div>
                     <div className="mt-2 text-sm">
                       <span className="text-slate-500">当選者:</span>{' '}
-                      {winners.length > 0 ? (
+                      {giveaway.winners.length > 0 ? (
                         <span className="inline-flex flex-wrap items-center gap-2">
-                          {winners.map((winner) => (
-                            <span key={winner!.id} className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-1">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={winner!.avatarUrl} alt="" className="h-4 w-4 rounded-full" />
-                              {winner!.name}
+                          {giveaway.winners.map((winnerId) => (
+                            <span key={winnerId} className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-1">
+                              {winnerId}
                             </span>
                           ))}
                         </span>

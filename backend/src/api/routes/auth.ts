@@ -17,15 +17,15 @@ import {
 import { respondError } from '../utils/response.js';
 
 export function registerAuthRoutes(app: Hono, client: Client): void {
-  app.get('/api/auth/login', (c) => {
+  app.get('/api/auth/login', async (c) => {
     try {
-      cleanupExpiredSessions();
+      await cleanupExpiredSessions();
       const clientId = process.env.DISCORD_OAUTH_CLIENT_ID;
       const redirectUri = buildRedirectUri();
       if (!clientId) {
         throw new AppError('DISCORD_OAUTH_CLIENT_ID is required.', 500);
       }
-      const state = createOAuthState();
+      const state = await createOAuthState();
       const authorizeUrl = new URL('https://discord.com/oauth2/authorize');
       authorizeUrl.searchParams.set('response_type', 'code');
       authorizeUrl.searchParams.set('client_id', clientId);
@@ -41,14 +41,14 @@ export function registerAuthRoutes(app: Hono, client: Client): void {
 
   app.get('/api/auth/callback', async (c) => {
     try {
-      cleanupExpiredSessions();
+      await cleanupExpiredSessions();
       const code = c.req.query('code');
       const state = c.req.query('state');
       const webBaseUrl = (process.env.WEB_BASE_URL ?? process.env.APP_BASE_URL ?? '').replace(/\/$/, '');
       if (!code || !state) {
         throw new AppError('Invalid OAuth callback parameters.', 400);
       }
-      if (!consumeOAuthState(state)) {
+      if (!(await consumeOAuthState(state))) {
         throw new AppError('OAuth state is invalid or expired.', 400);
       }
 
@@ -87,7 +87,7 @@ export function registerAuthRoutes(app: Hono, client: Client): void {
           targetId: session.token
         });
       }
-      c.header('Set-Cookie', storeSession(session));
+      c.header('Set-Cookie', await storeSession(session));
       return c.redirect(webBaseUrl || '/', 302);
     } catch (error) {
       await recordAuditEvent({
@@ -111,7 +111,7 @@ export function registerAuthRoutes(app: Hono, client: Client): void {
       const token = parseCookieToken(c.req.header('cookie'));
       if (token) {
         try {
-          const session = requireSession(c);
+          const session = await requireSession(c);
           for (const guild of session.guilds) {
             await recordAuditEvent({
               guildId: guild.id,
@@ -124,7 +124,7 @@ export function registerAuthRoutes(app: Hono, client: Client): void {
         } catch {
           // Ignore session read failures on logout.
         }
-        deleteSessionByToken(token);
+        await deleteSessionByToken(token);
       }
       c.header('Set-Cookie', clearCookieHeader());
       return c.json({ ok: true });
@@ -133,9 +133,9 @@ export function registerAuthRoutes(app: Hono, client: Client): void {
     }
   });
 
-  app.get('/api/auth/session', (c) => {
+  app.get('/api/auth/session', async (c) => {
     try {
-      const session = requireSession(c);
+      const session = await requireSession(c);
       return c.json({
         user: session.user,
         guilds: session.guilds
