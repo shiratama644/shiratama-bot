@@ -75,10 +75,10 @@ export async function createSessionFromOAuth(client: Client, accessToken: string
       return null;
     }
     const settings = await getGuildSettings(guild.id);
-    const requiresMemberCheck =
+    const requiresMemberFetch =
       settings.dashboardUsableRoleIds.length > 0 || settings.giveawayCreatorRoleIds.length > 0;
-    const member = requiresMemberCheck ? await guild.members.fetch(user.id).catch(() => null) : null;
-    if (requiresMemberCheck && !member) {
+    const member = requiresMemberFetch ? await guild.members.fetch(user.id).catch(() => null) : null;
+    if (requiresMemberFetch && !member) {
       return null;
     }
     const permissionBits = BigInt(oauthGuild.permissions);
