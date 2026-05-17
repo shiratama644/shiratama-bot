@@ -19,6 +19,7 @@ import {
 import { logger } from '../../../shared/logger/index.js';
 import { AppError } from '../../../shared/errors/index.js';
 import { DEFAULT_LANGUAGE, t } from '../../../shared/i18n/index.js';
+import { recordAuditEvent } from '../../audit/index.js';
 
 export async function handleModalSubmit(client: Client, interaction: ModalSubmitInteraction) {
   if (interaction.customId === MODAL_GIVEAWAY_CREATE) {
@@ -55,6 +56,19 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
       interval: autoRep ? duration : undefined,
       claimDeadline
     });
+    await recordAuditEvent({
+      guildId: interaction.guildId,
+      actorId: interaction.user.id,
+      action: 'giveaway.create',
+      targetType: 'giveaway',
+      targetId: created.id,
+      detail: JSON.stringify({
+        channelId: interaction.channelId,
+        title,
+        winnerCount: Number.isNaN(winnerCount) ? 1 : winnerCount,
+        autoRepeat: autoRep
+      })
+    });
 
     await interaction.reply({
       content: t(language, 'giveawayCreated', {
@@ -88,6 +102,19 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
       language,
       giveawayChannelIds,
       defaultClaimDeadline
+    });
+    await recordAuditEvent({
+      guildId: interaction.guildId,
+      actorId: interaction.user.id,
+      action: 'settings.update',
+      targetType: 'guild_settings',
+      targetId: interaction.guildId,
+      detail: JSON.stringify({
+        language,
+        giveawayCreatorRoleIds,
+        giveawayChannelIds,
+        defaultClaimDeadline
+      })
     });
 
     await interaction.reply({

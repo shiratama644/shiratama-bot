@@ -145,9 +145,15 @@ export async function createGiveaway(input: {
   deadline: string;
   winnerCount: number;
   autoRepeat: boolean;
+  idempotencyKey?: string;
 }) {
   return apiFetch<{ giveaway: Giveaway }>('/api/giveaways', {
     method: 'POST',
+    headers: input.idempotencyKey
+      ? {
+          'Idempotency-Key': input.idempotencyKey
+        }
+      : undefined,
     body: JSON.stringify(input)
   });
 }

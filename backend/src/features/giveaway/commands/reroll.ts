@@ -5,6 +5,7 @@ import { getEndedGiveaways, getGuildSettings } from '../../../db/index.js';
 import { assertCanManageGiveaways } from '../permissions.js';
 import { t } from '../../../shared/i18n/index.js';
 import { respondGiveawayAutocomplete } from './autocomplete.js';
+import { recordAuditEvent } from '../../audit/index.js';
 
 export const rerollCommand: Command = {
   name: 'greroll',
@@ -25,7 +26,15 @@ export const rerollCommand: Command = {
     }
     const id = interaction.options.getString('id', true);
     await ensureGiveawayInGuild(id, interaction.guildId);
-    await rerollGiveaway(client, id);
+    const winners = await rerollGiveaway(client, id);
+    await recordAuditEvent({
+      guildId: interaction.guildId,
+      actorId: interaction.user.id,
+      action: 'giveaway.reroll',
+      targetType: 'giveaway',
+      targetId: id,
+      detail: JSON.stringify({ winnerCount: winners.length })
+    });
     const settings = await getGuildSettings(interaction.guildId);
     await interaction.reply({ content: t(settings.language, 'giveawayRerolled', { id }), ephemeral: true });
   },

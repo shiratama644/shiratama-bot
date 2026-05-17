@@ -311,7 +311,8 @@ function DashboardContent({
           ? deadlineText.trim()
           : format(selectedDeadlineDate as Date, "yyyy-MM-dd'T'HH:mm:ssXXX"),
         winnerCount,
-        autoRepeat
+        autoRepeat,
+        idempotencyKey: crypto.randomUUID()
       });
     },
     onSuccess: async () => {
@@ -636,7 +637,7 @@ function DashboardContent({
                 設定を保存
               </button>
               {!activeGuildAccess?.isOwner ? (
-                <p className="text-xs text-slate-500">設定変更はサーバーオーナーのみ可能です。</p>
+                <p className="text-xs text-slate-500">設定変更にはサーバーオーナー権限が必要です。オーナーに依頼して設定を更新してください。</p>
               ) : null}
             </div>
           </section>
@@ -760,7 +761,10 @@ function DashboardContent({
                 Giveawayを作成
               </button>
               {!activeGuildAccess?.canCreateGiveaway ? (
-                <p className="text-xs text-slate-500">このサーバーでGiveaway作成権限がありません。</p>
+                <p className="text-xs text-slate-500">Giveaway作成権限がありません。作成可能ロール付与または管理者/オーナー権限での実行が必要です。</p>
+              ) : null}
+              {activeGuildAccess?.canCreateGiveaway && allowedChannelOptions.length === 0 ? (
+                <p className="text-xs text-slate-500">作成可能チャンネルが未設定です。サーバー設定で作成先チャンネルを追加してください。</p>
               ) : null}
             </form>
           </section>
