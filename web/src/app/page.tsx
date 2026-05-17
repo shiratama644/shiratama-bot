@@ -1,11 +1,29 @@
 import { DashboardApp } from '@/components/dashboard-app';
-import type { AuthSession } from '@/lib/api';
+import type { AuthGuild, AuthSession } from '@/lib/api';
 import { cookies } from 'next/headers';
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
+}
+
+function parseAuthGuild(value: unknown): AuthGuild | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const { id, name, iconUrl, canUseDashboard, canCreateGiveaway, isOwner } = value;
+  if (
+    typeof id !== 'string' ||
+    typeof name !== 'string' ||
+    (iconUrl !== null && typeof iconUrl !== 'string') ||
+    typeof canUseDashboard !== 'boolean' ||
+    typeof canCreateGiveaway !== 'boolean' ||
+    typeof isOwner !== 'boolean'
+  ) {
+    return null;
+  }
+  return { id, name, iconUrl, canUseDashboard, canCreateGiveaway, isOwner };
 }
 
 function parseAuthSession(value: unknown): AuthSession | null {
@@ -23,7 +41,10 @@ function parseAuthSession(value: unknown): AuthSession | null {
   if (!Array.isArray(value.guilds)) {
     return null;
   }
-  return value as AuthSession;
+  const guilds = value.guilds
+    .map((guild) => parseAuthGuild(guild))
+    .filter((guild): guild is AuthGuild => guild !== null);
+  return { user: { id, name, avatarUrl }, guilds };
 }
 
 async function fetchInitialSession(): Promise<{ initialSession: AuthSession | null; fetchedAt: number }> {
