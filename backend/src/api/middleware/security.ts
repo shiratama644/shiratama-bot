@@ -2,11 +2,17 @@ import { randomBytes } from 'node:crypto';
 import type { Hono } from 'hono';
 
 const CSRF_COOKIE_NAME = 'applejp_csrf_token';
+const CSRF_TOKEN_BYTES = 24;
 const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_AUTH = 30;
 const RATE_LIMIT_MAX_MUTATION = 120;
+// Upper bound for API JSON payloads to prevent accidental/abusive oversized submissions.
 const MAX_REQUEST_BODY_BYTES = 50 * 1024;
+const REQUEST_BODY_REQUIRED_PATHS = [
+  '/api/giveaways',
+  '/api/settings/'
+] as const;
 
 type RateLimitState = {
   count: number;
@@ -49,6 +55,16 @@ function getRateLimit(path: string, method: string): number {
   return RATE_LIMIT_MAX_MUTATION * 2;
 }
 
+function requiresBody(method: string, path: string): boolean {
+  if (!STATE_CHANGING_METHODS.has(method)) {
+    return false;
+  }
+  if (method === 'POST' && path === '/api/auth/logout') {
+    return false;
+  }
+  return REQUEST_BODY_REQUIRED_PATHS.some((prefix) => path.startsWith(prefix));
+}
+
 function passRateLimit(key: string, limit: number): boolean {
   const now = Date.now();
   const existing = rateLimitState.get(key);
@@ -84,6 +100,11 @@ export function registerSecurityMiddleware(app: Hono): void {
     }
 
     const contentLength = Number(c.req.header('content-length') ?? '0');
+    const hasContentLength = c.req.header('content-length') != null;
+    const hasTransferEncoding = c.req.header('transfer-encoding') != null;
+    if (requiresBody(method, path) && !hasContentLength && !hasTransferEncoding) {
+      return c.json({ error: 'Content-Length header is required for this request.' }, 411);
+    }
     if (!Number.isNaN(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
       return c.json({ error: 'Request payload too large.' }, 413);
     }
@@ -97,7 +118,7 @@ export function registerSecurityMiddleware(app: Hono): void {
     const cookieHeader = c.req.header('cookie');
     let csrfToken = parseCookie(cookieHeader, CSRF_COOKIE_NAME);
     if (!csrfToken) {
-      csrfToken = randomBytes(24).toString('hex');
+      csrfToken = randomBytes(CSRF_TOKEN_BYTES).toString('hex');
       const secure = shouldUseSecureCookie(c) ? '; Secure' : '';
       c.header('Set-Cookie', `${CSRF_COOKIE_NAME}=${csrfToken}; Path=/; SameSite=Lax${secure}`);
     }

@@ -153,7 +153,7 @@ export async function createGiveaway(input: {
       ? {
           'Idempotency-Key': input.idempotencyKey
         }
-      : undefined,
+      : {},
     body: JSON.stringify(input)
   });
 }

@@ -30,6 +30,7 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
     const autoRep = autoRepValues[0] === VALUE_AUTOREP_ENABLE;
     const winnerCountRaw = interaction.fields.getTextInputValue(FIELD_CREATE_WINNERS);
     const winnerCount = Number.parseInt(winnerCountRaw || '1', 10);
+    const winnerCountWithFallback = Number.isNaN(winnerCount) ? 1 : winnerCount;
 
     if (!interaction.guildId) {
       throw new AppError(t(DEFAULT_LANGUAGE, 'pleaseRunInTextChannelInServer'), 400);
@@ -51,7 +52,7 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
       title,
       description,
       deadlineInput: duration,
-      winnerCount: Number.isNaN(winnerCount) ? 1 : winnerCount,
+      winnerCount: winnerCountWithFallback,
       createdBy: interaction.user.id,
       interval: autoRep ? duration : undefined,
       claimDeadline
@@ -65,7 +66,7 @@ export async function handleModalSubmit(client: Client, interaction: ModalSubmit
       detail: JSON.stringify({
         channelId: interaction.channelId,
         title,
-        winnerCount: Number.isNaN(winnerCount) ? 1 : winnerCount,
+        winnerCount: winnerCountWithFallback,
         autoRepeat: autoRep
       })
     });

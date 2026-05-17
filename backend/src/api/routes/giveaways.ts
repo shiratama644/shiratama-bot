@@ -16,6 +16,26 @@ import { createGiveawayPost, endGiveaway, rerollGiveaway } from '../../features/
 import { createSchema, guildBodySchema } from '../schemas/giveaway.js';
 import { requireParam, respondError } from '../utils/response.js';
 
+const IDEMPOTENCY_KEY_MAX_LENGTH = 128;
+
+async function resolveIdempotentGiveaway(
+  key: string,
+  actorId: string,
+  guildId: string
+) {
+  const existing = await getIdempotencyRecord(key);
+  if (!existing) {
+    return null;
+  }
+  if (existing.actorId !== actorId || existing.guildId !== guildId) {
+    throw new AppError('This idempotency key is already used by another request.', 409);
+  }
+  if (!existing.giveawayId) {
+    throw new AppError('A request with the same idempotency key is still processing.', 409);
+  }
+  return getGiveaway(existing.giveawayId);
+}
+
 export function registerGiveawayRoutes(app: Hono, client: Client): void {
   app.get('/api/giveaways/:guildId', async (c) => {
     try {
@@ -34,33 +54,27 @@ export function registerGiveawayRoutes(app: Hono, client: Client): void {
       const session = requireSession(c);
       const body = c.req.valid('json');
       const idempotencyKey = c.req.header('idempotency-key')?.trim() ?? '';
+      if (idempotencyKey && idempotencyKey.length > IDEMPOTENCY_KEY_MAX_LENGTH) {
+        throw new AppError('Idempotency key is too long.', 400);
+      }
       const guild = getSessionGuild(session, body.guildId);
       if (!guild.canCreateGiveaway) {
         throw new AppError('You do not have permission to create giveaways.', 403);
       }
 
-      if (idempotencyKey && idempotencyKey.length > 128) {
-        throw new AppError('Idempotency key is too long.', 400);
-      }
-
       if (idempotencyKey) {
-        const existing = await getIdempotencyRecord(idempotencyKey);
-        if (existing) {
-          if (existing.actorId !== session.user.id || existing.guildId !== body.guildId) {
-            throw new AppError('This idempotency key is already used by another request.', 409);
+        const existingGiveaway = await resolveIdempotentGiveaway(idempotencyKey, session.user.id, body.guildId);
+        if (existingGiveaway) {
+          return c.json({ giveaway: existingGiveaway });
+        }
+
+        const createdRecord = await createIdempotencyRecord(idempotencyKey, session.user.id, body.guildId);
+        if (!createdRecord) {
+          const collidedGiveaway = await resolveIdempotentGiveaway(idempotencyKey, session.user.id, body.guildId);
+          if (collidedGiveaway) {
+            return c.json({ giveaway: collidedGiveaway });
           }
-          if (!existing.giveawayId) {
-            throw new AppError('A request with the same idempotency key is still processing.', 409);
-          }
-          const existingGiveaway = await getGiveaway(existing.giveawayId);
-          if (existingGiveaway) {
-            return c.json({ giveaway: existingGiveaway });
-          }
-        } else {
-          const createdRecord = await createIdempotencyRecord(idempotencyKey, session.user.id, body.guildId);
-          if (!createdRecord) {
-            throw new AppError('A request with the same idempotency key is already being processed.', 409);
-          }
+          throw new AppError('A request with the same idempotency key is already being processed.', 409);
         }
       }
 
