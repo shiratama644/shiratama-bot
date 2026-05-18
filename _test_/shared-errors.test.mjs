@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { AppError, getErrorMessage, getErrorStatusCode } from '../backend/dist/errors.js';
+import { AppError, getErrorMessage, getErrorStatusCode } from '../backend/dist/shared/errors/index.js';
 import { ZodError } from 'zod';
 
 test('AppError has correct name, message, and statusCode', () => {

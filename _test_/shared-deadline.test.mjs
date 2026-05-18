@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseDeadline } from '../backend/dist/deadline.js';
+import { parseDeadline } from '../backend/dist/shared/utils/deadline.js';
 
 test('parseDeadline parses duration in minutes', () => {
   const start = Date.now();

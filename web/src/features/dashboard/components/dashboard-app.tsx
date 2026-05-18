@@ -572,7 +572,7 @@ function DashboardContent({
           : format(selectedDeadlineDate as Date, "yyyy-MM-dd'T'HH:mm:ssXXX"),
         winnerCount: formValues.winnerCount,
         autoRepeat: formValues.autoRepeat,
-        idempotencyKey: crypto.randomUUID()
+        idempotencyKey: generateClientId()
       });
     },
     onSuccess: async () => {
