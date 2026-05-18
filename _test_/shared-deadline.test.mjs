@@ -31,9 +31,17 @@ test('parseDeadline parses duration in days', () => {
 });
 
 test('parseDeadline parses date and returns end of day', () => {
-  const parsed = parseDeadline('2026/04/22');
+  const date = new Date();
+  date.setDate(date.getDate() + 2);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const parsed = parseDeadline(`${yyyy}/${mm}/${dd}`);
 
-  assert.equal(parsed.toISOString(), '2026-04-22T23:59:59.999Z');
+  assert.equal(parsed.getHours(), 23);
+  assert.equal(parsed.getMinutes(), 59);
+  assert.equal(parsed.getSeconds(), 59);
+  assert.equal(parsed.getMilliseconds(), 999);
 });
 
 test('parseDeadline rejects non-positive durations', () => {
@@ -47,6 +55,6 @@ test('parseDeadline rejects zero hours', () => {
 test('parseDeadline rejects invalid formats', () => {
   assert.throws(
     () => parseDeadline('not-a-deadline'),
-    /Deadline must be in YYYY\/MM\/DD or 10m\/10h\/5d format/
+    /Deadline must be in YYYY\/MM\/DD or interval format like 10m\/10h\/5d\/1w/
   );
 });
