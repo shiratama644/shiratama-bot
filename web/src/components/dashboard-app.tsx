@@ -73,6 +73,7 @@ const INTERVAL_UNIT_MS: Record<string, number> = {
   m: 60 * 1000,
   s: 1000
 };
+const MAX_SAVED_GIVEAWAY_FILTERS = 20;
 
 const DEFAULT_GIVEAWAY_SEARCH_CRITERIA: GiveawaySearchCriteria = {
   status: 'all',
@@ -139,6 +140,13 @@ function parseIntervalMs(input: string): number | null {
 
 function stripLeadingMarker(name: string): string {
   return name.replace(/^[@#]/, '').trimStart();
+}
+
+function generateClientId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function readSavedGiveawayFilters(guildId: string | null): GiveawaySavedFilter[] {
@@ -397,9 +405,9 @@ function DashboardContent({
     setSelectedGuildId(guildId);
     setSettingsDraft(null);
     setSavedGiveawayFilterName('');
+    applyGiveawaySearchCriteria(DEFAULT_GIVEAWAY_SEARCH_CRITERIA);
     setSavedGiveawayFilters(readSavedGiveawayFilters(guildId));
     setSelectedSavedGiveawayFilterId('');
-    applyGiveawaySearchCriteria(DEFAULT_GIVEAWAY_SEARCH_CRITERIA);
   };
 
   const filteredGiveaways = useMemo(() => {
@@ -441,7 +449,7 @@ function DashboardContent({
         return false;
       }
       if (toMs !== null && Number.isFinite(toMs)) {
-        const endOfDay = toMs + (24 * 60 * 60 * 1000) - 1;
+        const endOfDay = toMs + INTERVAL_UNIT_MS.d - 1;
         if (createdAtMs > endOfDay) {
           return false;
         }
@@ -480,12 +488,12 @@ function DashboardContent({
     }
     const next: GiveawaySavedFilter[] = [
       {
-        id: crypto.randomUUID(),
+        id: generateClientId(),
         name,
         criteria: giveawaySearchCriteria
       },
       ...savedGiveawayFilters
-    ].slice(0, 20);
+    ].slice(0, MAX_SAVED_GIVEAWAY_FILTERS);
     persistSavedGiveawayFilters(next);
     setSavedGiveawayFilterName('');
   };
