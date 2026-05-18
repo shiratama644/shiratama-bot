@@ -38,6 +38,23 @@ type SelectOption = {
 
 type SectionKey = 'settings' | 'giveaway-create' | 'giveaway-list';
 type GiveawayFilterKey = 'all' | 'active' | 'claim-open' | 'claim-ended' | 'ended' | 'stopped';
+type GiveawaySortKey = 'created-at-desc' | 'created-at-asc' | 'end-at-desc' | 'end-at-asc';
+
+type GiveawaySearchCriteria = {
+  status: GiveawayFilterKey;
+  creatorId: string;
+  channelId: string;
+  keyword: string;
+  createdFrom: string;
+  createdTo: string;
+  sort: GiveawaySortKey;
+};
+
+type GiveawaySavedFilter = {
+  id: string;
+  name: string;
+  criteria: GiveawaySearchCriteria;
+};
 
 type SettingsDraft = {
   guildId: string;
@@ -55,6 +72,18 @@ const INTERVAL_UNIT_MS: Record<string, number> = {
   h: 60 * 60 * 1000,
   m: 60 * 1000,
   s: 1000
+};
+const END_OF_DAY_OFFSET_MS = 1;
+const MAX_SAVED_GIVEAWAY_FILTERS = 20;
+
+const DEFAULT_GIVEAWAY_SEARCH_CRITERIA: GiveawaySearchCriteria = {
+  status: 'all',
+  creatorId: '',
+  channelId: '',
+  keyword: '',
+  createdFrom: '',
+  createdTo: '',
+  sort: 'created-at-desc'
 };
 
 const createGiveawayFormSchema = z
@@ -114,6 +143,40 @@ function stripLeadingMarker(name: string): string {
   return name.replace(/^[@#]/, '').trimStart();
 }
 
+function generateClientId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+
+function readSavedGiveawayFilters(guildId: string | null): GiveawaySavedFilter[] {
+  if (!guildId || typeof window === 'undefined') {
+    return [];
+  }
+  const key = `applejp:giveaway-filters:${guildId}`;
+  const raw = window.localStorage.getItem(key);
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw) as GiveawaySavedFilter[];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter((item): item is GiveawaySavedFilter =>
+      Boolean(
+        item &&
+        typeof item.id === 'string' &&
+        typeof item.name === 'string' &&
+        item.criteria
+      )
+    );
+  } catch {
+    return [];
+  }
+}
+
 function getClaimState(giveaway: {
   status: 'active' | 'ended' | 'stopped';
   endAt: string;
@@ -152,7 +215,16 @@ function DashboardContent({
   const [menuOpen, setMenuOpen] = useState(false);
   const [giveawayMenuOpen, setGiveawayMenuOpen] = useState(true);
   const [activeSection, setActiveSection] = useState<SectionKey>('settings');
-  const [giveawayFilter, setGiveawayFilter] = useState<GiveawayFilterKey>('all');
+  const [giveawayFilter, setGiveawayFilter] = useState<GiveawayFilterKey>(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.status);
+  const [giveawayCreatorFilter, setGiveawayCreatorFilter] = useState<string>(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.creatorId);
+  const [giveawayChannelFilter, setGiveawayChannelFilter] = useState<string>(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.channelId);
+  const [giveawayKeywordFilter, setGiveawayKeywordFilter] = useState<string>(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.keyword);
+  const [giveawayCreatedFromFilter, setGiveawayCreatedFromFilter] = useState<string>(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.createdFrom);
+  const [giveawayCreatedToFilter, setGiveawayCreatedToFilter] = useState<string>(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.createdTo);
+  const [giveawaySort, setGiveawaySort] = useState<GiveawaySortKey>(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.sort);
+  const [savedGiveawayFilters, setSavedGiveawayFilters] = useState<GiveawaySavedFilter[]>([]);
+  const [savedGiveawayFilterName, setSavedGiveawayFilterName] = useState('');
+  const [selectedSavedGiveawayFilterId, setSelectedSavedGiveawayFilterId] = useState('');
   const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
   const [settingsDraft, setSettingsDraft] = useState<SettingsDraft | null>(null);
 
@@ -247,6 +319,22 @@ function DashboardContent({
     [giveawayUsersQuery.data]
   );
 
+  const giveawayCreatorOptions = useMemo(
+    () => {
+      const creatorIds = new Set((giveawaysQuery.data ?? []).map((giveaway) => giveaway.createdBy));
+      return [...creatorIds]
+        .map((creatorId) => {
+          const user = giveawayUserMap.get(creatorId);
+          return {
+            id: creatorId,
+            name: user?.name ?? creatorId
+          };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+    [giveawaysQuery.data, giveawayUserMap]
+  );
+
   const settingsSeed = useMemo<SettingsDraft | null>(() => {
     if (!activeGuildId || !settingsQuery.data) {
       return null;
@@ -280,25 +368,155 @@ function DashboardContent({
   );
   const canEditSettings = Boolean(currentSettings && activeGuildAccess?.isOwner);
 
+  const giveawaySearchCriteria: GiveawaySearchCriteria = {
+    status: giveawayFilter,
+    creatorId: giveawayCreatorFilter,
+    channelId: giveawayChannelFilter,
+    keyword: giveawayKeywordFilter,
+    createdFrom: giveawayCreatedFromFilter,
+    createdTo: giveawayCreatedToFilter,
+    sort: giveawaySort
+  };
+
+  const persistSavedGiveawayFilters = (next: GiveawaySavedFilter[]) => {
+    setSavedGiveawayFilters(next);
+    if (!activeGuildId || typeof window === 'undefined') {
+      return;
+    }
+    const key = `applejp:giveaway-filters:${activeGuildId}`;
+    window.localStorage.setItem(key, JSON.stringify(next));
+  };
+
+  const applyGiveawaySearchCriteria = (criteria: GiveawaySearchCriteria) => {
+    setGiveawayFilter(criteria.status);
+    setGiveawayCreatorFilter(criteria.creatorId);
+    setGiveawayChannelFilter(criteria.channelId);
+    setGiveawayKeywordFilter(criteria.keyword);
+    setGiveawayCreatedFromFilter(criteria.createdFrom);
+    setGiveawayCreatedToFilter(criteria.createdTo);
+    setGiveawaySort(criteria.sort);
+  };
+
+  const resetGiveawaySearchCriteria = () => {
+    applyGiveawaySearchCriteria(DEFAULT_GIVEAWAY_SEARCH_CRITERIA);
+    setSelectedSavedGiveawayFilterId('');
+  };
+
+  const selectGuild = (guildId: string) => {
+    setSelectedGuildId(guildId);
+    setSettingsDraft(null);
+    setSavedGiveawayFilterName('');
+    applyGiveawaySearchCriteria(DEFAULT_GIVEAWAY_SEARCH_CRITERIA);
+    setSavedGiveawayFilters(readSavedGiveawayFilters(guildId));
+    setSelectedSavedGiveawayFilterId('');
+  };
+
   const filteredGiveaways = useMemo(() => {
     const giveaways = giveawaysQuery.data ?? [];
-    switch (giveawayFilter) {
-      case 'all':
-        return giveaways;
-      case 'active':
-        return giveaways.filter((giveaway) => giveaway.status === 'active');
-      case 'claim-open':
-        return giveaways.filter((giveaway) => getClaimState(giveaway) === 'open');
-      case 'claim-ended':
-        return giveaways.filter((giveaway) => getClaimState(giveaway) === 'closed');
-      case 'ended':
-        return giveaways.filter((giveaway) => giveaway.status === 'ended');
-      case 'stopped':
-        return giveaways.filter((giveaway) => giveaway.status === 'stopped');
-      default:
-        return giveaways;
+    const keyword = giveawayKeywordFilter.trim().toLowerCase();
+    const rawFromMs = giveawayCreatedFromFilter ? new Date(giveawayCreatedFromFilter).getTime() : null;
+    const rawToMs = giveawayCreatedToFilter ? new Date(giveawayCreatedToFilter).getTime() : null;
+    const fromMs = rawFromMs !== null && !Number.isNaN(rawFromMs) ? rawFromMs : null;
+    const toMs = rawToMs !== null && !Number.isNaN(rawToMs) ? rawToMs : null;
+
+    const filtered = giveaways.filter((giveaway) => {
+      if (giveawayFilter === 'active' && giveaway.status !== 'active') {
+        return false;
+      }
+      if (giveawayFilter === 'claim-open' && getClaimState(giveaway) !== 'open') {
+        return false;
+      }
+      if (giveawayFilter === 'claim-ended' && getClaimState(giveaway) !== 'closed') {
+        return false;
+      }
+      if (giveawayFilter === 'ended' && giveaway.status !== 'ended') {
+        return false;
+      }
+      if (giveawayFilter === 'stopped' && giveaway.status !== 'stopped') {
+        return false;
+      }
+      if (giveawayCreatorFilter && giveaway.createdBy !== giveawayCreatorFilter) {
+        return false;
+      }
+      if (giveawayChannelFilter && giveaway.channelId !== giveawayChannelFilter) {
+        return false;
+      }
+      if (keyword) {
+        const haystack = `${giveaway.title}\n${giveaway.description ?? ''}`.toLowerCase();
+        if (!haystack.includes(keyword)) {
+          return false;
+        }
+      }
+      const createdAtMs = new Date(giveaway.createdAt).getTime();
+      if (fromMs !== null && createdAtMs < fromMs) {
+        return false;
+      }
+      if (toMs !== null) {
+        const endOfDay = toMs + INTERVAL_UNIT_MS.d - END_OF_DAY_OFFSET_MS;
+        if (createdAtMs > endOfDay) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      if (giveawaySort === 'created-at-asc') {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      if (giveawaySort === 'end-at-asc') {
+        return new Date(a.endAt).getTime() - new Date(b.endAt).getTime();
+      }
+      if (giveawaySort === 'end-at-desc') {
+        return new Date(b.endAt).getTime() - new Date(a.endAt).getTime();
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [
+    giveawayFilter,
+    giveawayCreatorFilter,
+    giveawayChannelFilter,
+    giveawayKeywordFilter,
+    giveawayCreatedFromFilter,
+    giveawayCreatedToFilter,
+    giveawaySort,
+    giveawaysQuery.data
+  ]);
+
+  const saveCurrentGiveawayFilter = () => {
+    const name = savedGiveawayFilterName.trim();
+    if (!name) {
+      alert('保存名を入力してください。');
+      return;
     }
-  }, [giveawayFilter, giveawaysQuery.data]);
+    const next: GiveawaySavedFilter[] = [
+      {
+        id: generateClientId(),
+        name,
+        criteria: giveawaySearchCriteria
+      },
+      ...savedGiveawayFilters
+    ].slice(0, MAX_SAVED_GIVEAWAY_FILTERS);
+    persistSavedGiveawayFilters(next);
+    setSavedGiveawayFilterName('');
+  };
+
+  const applySavedGiveawayFilter = () => {
+    const selected = savedGiveawayFilters.find((item) => item.id === selectedSavedGiveawayFilterId);
+    if (!selected) {
+      return;
+    }
+    applyGiveawaySearchCriteria(selected.criteria);
+  };
+
+  const deleteSavedGiveawayFilter = () => {
+    if (!selectedSavedGiveawayFilterId) {
+      return;
+    }
+    const next = savedGiveawayFilters.filter((item) => item.id !== selectedSavedGiveawayFilterId);
+    persistSavedGiveawayFilters(next);
+    setSelectedSavedGiveawayFilterId('');
+  };
 
   const updateCurrentSettings = (patch: Partial<SettingsDraft>) => {
     if (!settingsSeed) {
@@ -449,8 +667,7 @@ function DashboardContent({
                 key={guild.id}
                 disabled={!guild.canUseDashboard}
                 onClick={() => {
-                  setSelectedGuildId(guild.id);
-                  setSettingsDraft(null);
+                  selectGuild(guild.id);
                 }}
                 className={`flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-sm ${
                   guild.canUseDashboard
@@ -574,8 +791,7 @@ function DashboardContent({
                 if (!guild.canUseDashboard) {
                   return;
                 }
-                setSelectedGuildId(guild.id);
-                setSettingsDraft(null);
+                selectGuild(guild.id);
                 setMenuOpen(false);
               }}
               disabled={!guild.canUseDashboard}
@@ -814,23 +1030,152 @@ function DashboardContent({
 
         {activeSection === 'giveaway-list' ? (
           <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="mb-4 space-y-3">
               <h2 className="text-base font-semibold">Giveaway 一覧</h2>
-              <label className="text-sm">
-                <span className="mr-2 text-slate-600">フィルター</span>
-                <select
-                  value={giveawayFilter}
-                  onChange={(event) => setGiveawayFilter(event.target.value as GiveawayFilterKey)}
-                  className="rounded-md border border-slate-300 px-2 py-1"
-                >
-                  <option value="all">すべて</option>
-                  <option value="active">進行中</option>
-                  <option value="claim-open">請求受付中</option>
-                  <option value="claim-ended">請求終了</option>
-                  <option value="ended">終了</option>
-                  <option value="stopped">停止</option>
-                </select>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                <label className="text-sm">
+                  <span className="mb-1 block text-slate-600">ステータス</span>
+                  <select
+                    value={giveawayFilter}
+                    onChange={(event) => setGiveawayFilter(event.target.value as GiveawayFilterKey)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-2"
+                  >
+                    <option value="all">すべて</option>
+                    <option value="active">進行中</option>
+                    <option value="claim-open">請求受付中</option>
+                    <option value="claim-ended">請求終了</option>
+                    <option value="ended">終了</option>
+                    <option value="stopped">停止</option>
+                  </select>
+                </label>
+
+                <label className="text-sm">
+                  <span className="mb-1 block text-slate-600">作成者</span>
+                  <select
+                    value={giveawayCreatorFilter}
+                    onChange={(event) => setGiveawayCreatorFilter(event.target.value)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-2"
+                  >
+                    <option value="">すべて</option>
+                    {giveawayCreatorOptions.map((creator) => (
+                      <option key={creator.id} value={creator.id}>
+                        {creator.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="text-sm">
+                  <span className="mb-1 block text-slate-600">チャンネル</span>
+                  <select
+                    value={giveawayChannelFilter}
+                    onChange={(event) => setGiveawayChannelFilter(event.target.value)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-2"
+                  >
+                    <option value="">すべて</option>
+                    {channelOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="text-sm">
+                  <span className="mb-1 block text-slate-600">作成日（開始）</span>
+                  <input
+                    type="date"
+                    value={giveawayCreatedFromFilter}
+                    onChange={(event) => setGiveawayCreatedFromFilter(event.target.value)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-2"
+                  />
+                </label>
+
+                <label className="text-sm">
+                  <span className="mb-1 block text-slate-600">作成日（終了）</span>
+                  <input
+                    type="date"
+                    value={giveawayCreatedToFilter}
+                    onChange={(event) => setGiveawayCreatedToFilter(event.target.value)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-2"
+                  />
+                </label>
+
+                <label className="text-sm">
+                  <span className="mb-1 block text-slate-600">並び替え</span>
+                  <select
+                    value={giveawaySort}
+                    onChange={(event) => setGiveawaySort(event.target.value as GiveawaySortKey)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-2"
+                  >
+                    <option value="created-at-desc">作成日（新しい順）</option>
+                    <option value="created-at-asc">作成日（古い順）</option>
+                    <option value="end-at-desc">終了日（新しい順）</option>
+                    <option value="end-at-asc">終了日（古い順）</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="block text-sm">
+                <span className="mb-1 block text-slate-600">キーワード（タイトル・説明）</span>
+                <input
+                  value={giveawayKeywordFilter}
+                  onChange={(event) => setGiveawayKeywordFilter(event.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2"
+                  placeholder="例: Nitro"
+                />
               </label>
+
+              <div className="flex flex-wrap gap-2">
+                <input
+                  value={savedGiveawayFilterName}
+                  onChange={(event) => setSavedGiveawayFilterName(event.target.value)}
+                  className="min-w-[180px] rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="保存名"
+                />
+                <button
+                  type="button"
+                  onClick={saveCurrentGiveawayFilter}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100"
+                >
+                  条件を保存
+                </button>
+                <select
+                  value={selectedSavedGiveawayFilterId}
+                  onChange={(event) => setSelectedSavedGiveawayFilterId(event.target.value)}
+                  className="min-w-[200px] rounded-md border border-slate-300 px-2 py-2 text-sm"
+                >
+                  <option value="">保存済み条件を選択</option>
+                  {savedGiveawayFilters.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={applySavedGiveawayFilter}
+                  disabled={!selectedSavedGiveawayFilterId}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100 disabled:opacity-50"
+                >
+                  適用
+                </button>
+                <button
+                  type="button"
+                  onClick={deleteSavedGiveawayFilter}
+                  disabled={!selectedSavedGiveawayFilterId}
+                  className="rounded-md border border-rose-200 px-3 py-2 text-sm text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                >
+                  削除
+                </button>
+                <button
+                  type="button"
+                  onClick={resetGiveawaySearchCriteria}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100"
+                >
+                  条件をリセット
+                </button>
+              </div>
             </div>
             <div className="space-y-3">
               {filteredGiveaways.map((giveaway) => {
