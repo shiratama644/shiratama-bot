@@ -144,7 +144,7 @@ function buildPool(): Pool {
   if (process.env.NODE_ENV === 'production' && !ALLOWED_DATABASE_SSL_MODES_PRODUCTION.has(sslMode)) {
     throw new AppError('DATABASE_SSL_MODE must be require, verify-ca, or verify-full in production.', 500);
   }
-  const shouldRequireSsl = sslMode === 'require';
+  const shouldRequireSsl = sslMode !== 'disable' && sslMode !== 'prefer';
   const applicationName = process.env.DATABASE_APPLICATION_NAME ?? 'applejp-bot';
   const createdPool = new Pool({
     connectionString,

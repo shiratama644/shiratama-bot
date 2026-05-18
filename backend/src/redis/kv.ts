@@ -6,6 +6,10 @@ export function buildRedisKey(prefix: string, suffix: string): string {
   return `${prefix}${suffix}`;
 }
 
+function escapeRedisMatchPattern(value: string): string {
+  return value.replace(/([*?[\\\]])/g, '\\$1');
+}
+
 export async function deleteRedisKey(key: string, redis = getRedis()): Promise<void> {
   await redis.del(key);
 }
@@ -76,7 +80,13 @@ export async function scanKeysByPrefix(
     if (scannedCount >= config.maxScannedKeys) {
       return;
     }
-    const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', config.scanCount);
+    const [nextCursor, keys] = await redis.scan(
+      cursor,
+      'MATCH',
+      `${escapeRedisMatchPattern(prefix)}*`,
+      'COUNT',
+      config.scanCount
+    );
     cursor = nextCursor;
     const limitedKeys = keys.slice(0, config.maxScannedKeys - scannedCount);
     scannedCount += limitedKeys.length;
