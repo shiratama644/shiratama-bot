@@ -107,7 +107,8 @@ export function registerSecurityMiddleware(app: Hono): void {
 
     const contentLength = Number(c.req.header('content-length') ?? '0');
     const hasContentLength = c.req.header('content-length') != null;
-    if (requiresBody(method, path) && !hasContentLength) {
+    const hasTransferEncoding = c.req.header('transfer-encoding') != null;
+    if (requiresBody(method, path) && !hasContentLength && !hasTransferEncoding) {
       return c.json({ error: 'Content-Length header is required for this request.' }, 411);
     }
     if (!Number.isNaN(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
@@ -118,7 +119,7 @@ export function registerSecurityMiddleware(app: Hono): void {
     if (STATE_CHANGING_METHODS.has(method)) {
       const allowedOrigin = resolveAllowedOrigin();
       if (!allowedOrigin) {
-        return c.json({ error: 'Origin policy is not configured.' }, 500);
+        return c.json({ error: 'Server misconfiguration: origin policy is not set.' }, 500);
       }
       if (!requestOrigin || requestOrigin !== allowedOrigin) {
         return c.json({ error: 'Invalid request origin.' }, 403);

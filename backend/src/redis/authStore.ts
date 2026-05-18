@@ -105,9 +105,18 @@ type SessionCleanupConfig = {
   maxScannedKeys?: number;
 };
 
+const SESSION_CLEANUP_DEFAULT_SCAN_COUNT = 50;
+const SESSION_CLEANUP_DEFAULT_MAX_SCANNED_KEYS = 200;
+
 export async function cleanupStoredAuthSessions(config?: SessionCleanupConfig): Promise<number> {
-  const scanCount = Math.max(1, Math.floor(config?.scanCount ?? 50));
-  const maxScannedKeys = Math.max(1, Math.floor(config?.maxScannedKeys ?? 200));
+  const normalizedScanCount = config?.scanCount !== undefined
+    ? Math.floor(config.scanCount)
+    : SESSION_CLEANUP_DEFAULT_SCAN_COUNT;
+  const normalizedMaxScannedKeys = config?.maxScannedKeys !== undefined
+    ? Math.floor(config.maxScannedKeys)
+    : SESSION_CLEANUP_DEFAULT_MAX_SCANNED_KEYS;
+  const scanCount = Math.max(1, normalizedScanCount);
+  const maxScannedKeys = Math.max(1, normalizedMaxScannedKeys);
   const redis = getRedis();
   let deletedCount = 0;
   let scannedCount = 0;
