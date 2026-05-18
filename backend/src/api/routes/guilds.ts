@@ -111,9 +111,10 @@ export function registerGuildRoutes(app: Hono, client: Client): void {
   });
 
   app.get('/api/guilds/:guildId/options', async (c) => {
+    const rawGuildId = c.req.param('guildId');
+    const forceRefresh = c.req.query('refresh') === '1';
     try {
-      const guildId = requireParam(c.req.param('guildId'), 'guildId');
-      const forceRefresh = c.req.query('refresh') === '1';
+      const guildId = requireParam(rawGuildId, 'guildId');
       const session = await requireSession(c);
       getSessionGuild(session, guildId);
       const cached = await getCachedGuildOptions(guildId);
@@ -139,11 +140,8 @@ export function registerGuildRoutes(app: Hono, client: Client): void {
       await setCachedGuildOptions(guildId, latest);
       return c.json(latest);
     } catch (error) {
-      if (c.req.query('refresh') === '1') {
-        const guildId = c.req.param('guildId');
-        if (guildId) {
-          logger.warn('Guild options refresh failed.', { guildId, error });
-        }
+      if (forceRefresh && rawGuildId) {
+        logger.warn('Guild options refresh failed.', { guildId: rawGuildId, error });
       }
       return respondError(c, error);
     }
