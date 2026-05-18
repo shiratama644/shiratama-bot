@@ -223,6 +223,7 @@ function DashboardContent({
   const [savedGiveawayFilterName, setSavedGiveawayFilterName] = useState('');
   const [selectedSavedGiveawayFilterId, setSelectedSavedGiveawayFilterId] = useState('');
   const [selectedGuildId, setSelectedGuildId] = useState<string | null>(null);
+  const [guildOptionsRefreshNonce, setGuildOptionsRefreshNonce] = useState(0);
   const [settingsDraft, setSettingsDraft] = useState<SettingsDraft | null>(null);
 
   const [selectedDeadlineDate, setSelectedDeadlineDate] = useState<Date | null>(null);
@@ -259,8 +260,8 @@ function DashboardContent({
   const activeGuildId = selectedGuildId;
 
   const optionsQuery = useQuery({
-    queryKey: ['guild-options', activeGuildId],
-    queryFn: () => fetchGuildOptions(activeGuildId as string),
+    queryKey: ['guild-options', activeGuildId, guildOptionsRefreshNonce],
+    queryFn: () => fetchGuildOptions(activeGuildId as string, guildOptionsRefreshNonce > 0),
     enabled: Boolean(activeGuildId && sessionQuery.data)
   });
 
@@ -402,6 +403,7 @@ function DashboardContent({
 
   const selectGuild = (guildId: string) => {
     setSelectedGuildId(guildId);
+    setGuildOptionsRefreshNonce(0);
     setSettingsDraft(null);
     setSavedGiveawayFilterName('');
     applyGiveawaySearchCriteria(DEFAULT_GIVEAWAY_SEARCH_CRITERIA);
@@ -1279,8 +1281,19 @@ function DashboardContent({
       ) : null}
 
       {(optionsQuery.error || settingsQuery.error || giveawaysQuery.error || giveawayUsersQuery.error) ? (
-        <div className="fixed bottom-4 left-4 max-w-sm rounded-md bg-rose-100 px-3 py-2 text-xs text-rose-700">
-          {String(optionsQuery.error ?? settingsQuery.error ?? giveawaysQuery.error ?? giveawayUsersQuery.error)}
+        <div className="fixed bottom-4 left-4 flex max-w-sm flex-col gap-2 rounded-md bg-rose-100 px-3 py-2 text-xs text-rose-700">
+          <div>
+            {String(optionsQuery.error ?? settingsQuery.error ?? giveawaysQuery.error ?? giveawayUsersQuery.error)}
+          </div>
+          {optionsQuery.error && activeGuildId ? (
+            <button
+              type="button"
+              onClick={() => setGuildOptionsRefreshNonce((current) => current + 1)}
+              className="self-start rounded-md bg-rose-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-rose-500"
+            >
+              Discordから再取得
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>

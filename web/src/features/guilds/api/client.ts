@@ -6,6 +6,11 @@ export async function fetchGuilds() {
   return payload.guilds;
 }
 
-export async function fetchGuildOptions(guildId: string) {
-  return apiFetch<GuildOptions>(`/api/guilds/${guildId}/options`);
+export async function fetchGuildOptions(guildId: string, forceRefresh = false) {
+  const params = new URLSearchParams();
+  if (forceRefresh) {
+    params.set('refresh', '1');
+  }
+  const query = params.size > 0 ? `?${params.toString()}` : '';
+  return apiFetch<GuildOptions>(`/api/guilds/${guildId}/options${query}`);
 }
