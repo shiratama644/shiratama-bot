@@ -9,7 +9,9 @@ import { AppError } from '../../shared/errors/index.js';
 import { getSessionGuild, requireSession } from '../../features/auth/index.js';
 import { requireParam, respondError } from '../utils/response.js';
 
-const DISCORD_GUILD_OPTIONS_FETCH_MAX_RETRIES = 1;
+const DISCORD_GUILD_OPTIONS_FETCH_RETRY_COUNT = 1;
+// Keep retry delay short to recover transient Discord/API gateway hiccups without slowing normal requests.
+const DISCORD_GUILD_OPTIONS_RETRY_DELAY_MS = 200;
 
 type GuildOptionsResponse = {
   guild: {
@@ -75,15 +77,15 @@ async function fetchGuildOptionsFromDiscord(client: Client, guildId: string): Pr
 
 async function fetchGuildOptionsWithRetry(client: Client, guildId: string): Promise<GuildOptionsResponse> {
   let lastError: unknown = null;
-  for (let attempt = 0; attempt <= DISCORD_GUILD_OPTIONS_FETCH_MAX_RETRIES; attempt += 1) {
+  for (let attemptIndex = 0; attemptIndex <= DISCORD_GUILD_OPTIONS_FETCH_RETRY_COUNT; attemptIndex += 1) {
     try {
       return await fetchGuildOptionsFromDiscord(client, guildId);
     } catch (error) {
       lastError = error;
-      if (attempt >= DISCORD_GUILD_OPTIONS_FETCH_MAX_RETRIES) {
+      if (attemptIndex >= DISCORD_GUILD_OPTIONS_FETCH_RETRY_COUNT) {
         break;
       }
-      await new Promise<void>((resolve) => setTimeout(resolve, 200));
+      await new Promise<void>((resolve) => setTimeout(resolve, DISCORD_GUILD_OPTIONS_RETRY_DELAY_MS));
     }
   }
 

@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { getRedis } from './client.js';
 
 const GUILD_OPTIONS_KEY_PREFIX = 'guild:options:';
-const GUILD_OPTIONS_TTL_MS = 2 * 24 * 60 * 60 * 1000;
+const GUILD_OPTIONS_TTL_DAYS = 2;
+const GUILD_OPTIONS_TTL_MS = GUILD_OPTIONS_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 const cachedGuildOptionsSchema = z.object({
   guild: z.object({
