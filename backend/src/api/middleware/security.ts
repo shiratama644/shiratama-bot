@@ -27,8 +27,20 @@ function parseCookie(header: string | undefined, key: string): string | null {
 }
 
 function getClientIp(forwardedFor: string | undefined, realIp: string | undefined): string {
-  const xff = forwardedFor?.split(',')[0]?.trim();
-  return xff || realIp || 'unknown';
+  const trustProxy = process.env.TRUST_PROXY === 'true';
+  if (trustProxy) {
+    const xff = forwardedFor?.split(',')[0]?.trim();
+    if (xff) {
+      return xff;
+    }
+  }
+  const normalizedRealIp = realIp?.trim();
+  return normalizedRealIp || 'unknown';
+}
+
+function resolveAllowedOrigin(): string | null {
+  const origin = (process.env.CORS_ORIGIN ?? process.env.WEB_BASE_URL ?? process.env.APP_BASE_URL ?? '').trim();
+  return origin.length > 0 ? origin : null;
 }
 
 function shouldUseSecureCookie(c: { req: { header: (key: string) => string | undefined } }): boolean {
@@ -95,18 +107,22 @@ export function registerSecurityMiddleware(app: Hono): void {
 
     const contentLength = Number(c.req.header('content-length') ?? '0');
     const hasContentLength = c.req.header('content-length') != null;
-    const hasTransferEncoding = c.req.header('transfer-encoding') != null;
-    if (requiresBody(method, path) && !hasContentLength && !hasTransferEncoding) {
+    if (requiresBody(method, path) && !hasContentLength) {
       return c.json({ error: 'Content-Length header is required for this request.' }, 411);
     }
     if (!Number.isNaN(contentLength) && contentLength > MAX_REQUEST_BODY_BYTES) {
       return c.json({ error: 'Request payload too large.' }, 413);
     }
 
-    const allowedOrigin = process.env.CORS_ORIGIN;
     const requestOrigin = c.req.header('origin');
-    if (STATE_CHANGING_METHODS.has(method) && allowedOrigin && requestOrigin !== allowedOrigin) {
-      return c.json({ error: 'Invalid request origin.' }, 403);
+    if (STATE_CHANGING_METHODS.has(method)) {
+      const allowedOrigin = resolveAllowedOrigin();
+      if (!allowedOrigin) {
+        return c.json({ error: 'Origin policy is not configured.' }, 500);
+      }
+      if (!requestOrigin || requestOrigin !== allowedOrigin) {
+        return c.json({ error: 'Invalid request origin.' }, 403);
+      }
     }
 
     const cookieHeader = c.req.header('cookie');
