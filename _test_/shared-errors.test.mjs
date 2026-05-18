@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { AppError, getErrorMessage, getErrorStatusCode } from '../backend/dist/errors.js';
-import { ZodError } from 'zod';
+import { AppError, getErrorMessage, getErrorStatusCode } from '../backend/dist/shared/errors/index.js';
+import { ZodError } from '../backend/node_modules/zod/index.js';
 
 test('AppError has correct name, message, and statusCode', () => {
   const error = new AppError('something went wrong', 422);

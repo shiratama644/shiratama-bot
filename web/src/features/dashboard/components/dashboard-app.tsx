@@ -16,19 +16,16 @@ import {
   useQueryClient
 } from '@tanstack/react-query';
 import {
-  type AuthSession,
   createGiveaway,
   endGiveaway,
-  fetchAuthSession,
-  fetchGuildOptions,
   fetchGiveawayUsers,
   fetchGiveaways,
-  fetchSettings,
-  getLoginUrl,
-  logout,
-  rerollGiveaway,
-  updateSettings
-} from '@/lib/api';
+  rerollGiveaway
+} from '@/features/giveaways/api/client';
+import type { AuthSession } from '@/features/auth/types';
+import { fetchAuthSession, getLoginUrl, logout } from '@/features/auth/api/client';
+import { fetchGuildOptions } from '@/features/guilds/api/client';
+import { fetchSettings, updateSettings } from '@/features/settings/api/client';
 
 type SelectOption = {
   value: string;
@@ -230,6 +227,7 @@ function DashboardContent({
 
   const [selectedDeadlineDate, setSelectedDeadlineDate] = useState<Date | null>(null);
   const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+  const [createIdempotencyKey, setCreateIdempotencyKey] = useState(() => generateClientId());
   const {
     register,
     handleSubmit,
@@ -565,22 +563,23 @@ function DashboardContent({
       if (!formValues.autoRepeat && !selectedDeadlineDate) {
         throw new Error('終了日時を入力してください。');
       }
-      return createGiveaway({
-        guildId: activeGuildId,
-        channelId: activeChannelId,
-        title: formValues.title.trim(),
-        description: formValues.description.trim(),
+        return createGiveaway({
+          guildId: activeGuildId,
+          channelId: activeChannelId,
+          title: formValues.title.trim(),
+          description: formValues.description.trim(),
         deadline: formValues.autoRepeat
           ? formValues.deadlineText.trim()
           : format(selectedDeadlineDate as Date, "yyyy-MM-dd'T'HH:mm:ssXXX"),
         winnerCount: formValues.winnerCount,
         autoRepeat: formValues.autoRepeat,
-        idempotencyKey: crypto.randomUUID()
+        idempotencyKey: createIdempotencyKey
       });
     },
     onSuccess: async () => {
       reset();
       setSelectedDeadlineDate(null);
+      setCreateIdempotencyKey(generateClientId());
       if (activeGuildId) {
         await queryClient.invalidateQueries({ queryKey: ['giveaways', activeGuildId] });
       }

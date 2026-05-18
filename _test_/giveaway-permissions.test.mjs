@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { hasAnyRequiredRole } from '../backend/dist/commands/permissions.js';
+import { hasAnyRequiredRole } from '../backend/dist/features/giveaway/permissions.js';
 
 test('hasAnyRequiredRole returns true when at least one role matches', () => {
   const memberRoles = new Set(['r1', 'r2']);

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { giveawayButton, giveawayButtons, giveawayEmbed } from '../backend/dist/giveaway/index.js';
+import { giveawayButton, giveawayButtons, giveawayEmbed } from '../backend/dist/features/giveaway/index.js';
 
 test('giveawayButton builds primary button with giveaway custom id', () => {
   const row = giveawayButton('g1');

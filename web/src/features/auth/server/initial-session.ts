@@ -1,9 +1,7 @@
-import { DashboardApp } from '@/components/dashboard-app';
-import type { AuthGuild, AuthSession } from '@/lib/api';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
-
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+import type { AuthGuild, AuthSession } from '@/features/auth/types';
+import { getApiBaseUrl } from '@/lib/api/client';
 
 const authGuildSchema = z.object({
   id: z.string().min(1),
@@ -23,14 +21,18 @@ const authSessionSchema = z.object({
   guilds: z.array(authGuildSchema)
 }) satisfies z.ZodType<AuthSession>;
 
-async function fetchInitialSession(): Promise<{ initialSession: AuthSession | null; fetchedAt: number }> {
+export async function fetchInitialSession(): Promise<{
+  initialSession: AuthSession | null;
+  fetchedAt: number;
+}> {
   try {
     const cookieStore = await cookies();
     const cookieHeader = cookieStore.toString();
     if (!cookieHeader) {
       return { initialSession: null, fetchedAt: Date.now() };
     }
-    const response = await fetch(`${apiBaseUrl}/api/auth/session`, {
+
+    const response = await fetch(`${getApiBaseUrl()}/api/auth/session`, {
       headers: {
         cookie: cookieHeader
       },
@@ -48,14 +50,10 @@ async function fetchInitialSession(): Promise<{ initialSession: AuthSession | nu
       console.error('Invalid SSR auth session payload');
       return { initialSession: null, fetchedAt: Date.now() };
     }
+
     return { initialSession: parsed.data, fetchedAt: Date.now() };
   } catch (error) {
     console.error('SSR auth session fetch error:', error);
     return { initialSession: null, fetchedAt: Date.now() };
   }
-}
-
-export default async function Home() {
-  const { initialSession, fetchedAt } = await fetchInitialSession();
-  return <DashboardApp initialSession={initialSession} initialSessionFetchedAt={fetchedAt} />;
 }
