@@ -135,10 +135,13 @@ function buildPool(): Pool {
     throw new AppError('DATABASE_URL environment variable is not configured.', 500);
   }
   if (!ALLOWED_DATABASE_SSL_MODES.has(sslMode)) {
-    throw new AppError('DATABASE_SSL_MODE is invalid. Expected disable|prefer|require|verify-ca|verify-full.', 500);
+    throw new AppError(
+      `DATABASE_SSL_MODE "${sslMode}" is invalid. Expected disable|prefer|require|verify-ca|verify-full.`,
+      500
+    );
   }
-  if (process.env.NODE_ENV === 'production' && sslMode !== 'require') {
-    throw new AppError('DATABASE_SSL_MODE must be "require" in production.', 500);
+  if (process.env.NODE_ENV === 'production' && !ALLOWED_DATABASE_SSL_MODES_PRODUCTION.has(sslMode)) {
+    throw new AppError('DATABASE_SSL_MODE must be require, verify-ca, or verify-full in production.', 500);
   }
   const shouldRequireSsl = sslMode === 'require';
   const applicationName = process.env.DATABASE_APPLICATION_NAME ?? 'applejp-bot';
@@ -246,3 +249,4 @@ export async function initSchema(): Promise<void> {
     throw error;
   }
 }
+const ALLOWED_DATABASE_SSL_MODES_PRODUCTION = new Set(['require', 'verify-ca', 'verify-full']);
