@@ -31,12 +31,7 @@ test('parseDeadline parses duration in days', () => {
 });
 
 test('parseDeadline parses date and returns end of day', () => {
-  const date = new Date();
-  date.setDate(date.getDate() + 2);
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  const parsed = parseDeadline(`${yyyy}/${mm}/${dd}`);
+  const parsed = parseDeadline('2099/04/22');
 
   assert.equal(parsed.getHours(), 23);
   assert.equal(parsed.getMinutes(), 59);

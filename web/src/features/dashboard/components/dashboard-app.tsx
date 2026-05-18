@@ -227,6 +227,7 @@ function DashboardContent({
 
   const [selectedDeadlineDate, setSelectedDeadlineDate] = useState<Date | null>(null);
   const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+  const [createIdempotencyKey, setCreateIdempotencyKey] = useState(() => generateClientId());
   const {
     register,
     handleSubmit,
@@ -562,22 +563,23 @@ function DashboardContent({
       if (!formValues.autoRepeat && !selectedDeadlineDate) {
         throw new Error('終了日時を入力してください。');
       }
-      return createGiveaway({
-        guildId: activeGuildId,
-        channelId: activeChannelId,
-        title: formValues.title.trim(),
-        description: formValues.description.trim(),
+        return createGiveaway({
+          guildId: activeGuildId,
+          channelId: activeChannelId,
+          title: formValues.title.trim(),
+          description: formValues.description.trim(),
         deadline: formValues.autoRepeat
           ? formValues.deadlineText.trim()
           : format(selectedDeadlineDate as Date, "yyyy-MM-dd'T'HH:mm:ssXXX"),
         winnerCount: formValues.winnerCount,
         autoRepeat: formValues.autoRepeat,
-        idempotencyKey: generateClientId()
+        idempotencyKey: createIdempotencyKey
       });
     },
     onSuccess: async () => {
       reset();
       setSelectedDeadlineDate(null);
+      setCreateIdempotencyKey(generateClientId());
       if (activeGuildId) {
         await queryClient.invalidateQueries({ queryKey: ['giveaways', activeGuildId] });
       }
