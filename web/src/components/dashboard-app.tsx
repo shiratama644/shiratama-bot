@@ -445,10 +445,10 @@ function DashboardContent({
         }
       }
       const createdAtMs = new Date(giveaway.createdAt).getTime();
-      if (fromMs !== null && Number.isFinite(fromMs) && createdAtMs < fromMs) {
+      if (fromMs !== null && !Number.isNaN(fromMs) && createdAtMs < fromMs) {
         return false;
       }
-      if (toMs !== null && Number.isFinite(toMs)) {
+      if (toMs !== null && !Number.isNaN(toMs)) {
         const endOfDay = toMs + INTERVAL_UNIT_MS.d - 1;
         if (createdAtMs > endOfDay) {
           return false;
