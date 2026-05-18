@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getRedis } from './client.js';
+import { buildRedisKey, deleteRedisKey, getRedisJson, setRedisJson } from './kv.js';
 
 const IDEMPOTENCY_KEY_PREFIX = 'idempotency:giveaway:';
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -15,53 +16,35 @@ type IdempotencyRecord = z.infer<typeof idempotencyRecordSchema> & {
 };
 
 function buildIdempotencyKey(key: string): string {
-  return `${IDEMPOTENCY_KEY_PREFIX}${key}`;
-}
-
-async function deleteRedisKey(key: string): Promise<void> {
-  await getRedis().del(key);
+  return buildRedisKey(IDEMPOTENCY_KEY_PREFIX, key);
 }
 
 export async function getIdempotencyRecord(key: string): Promise<IdempotencyRecord | null> {
-  const redisKey = buildIdempotencyKey(key);
-  const raw = await getRedis().get(redisKey);
-  if (!raw) {
-    return null;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    await deleteRedisKey(redisKey);
-    return null;
-  }
-
-  const record = idempotencyRecordSchema.safeParse(parsed);
-  if (!record.success) {
-    await deleteRedisKey(redisKey);
+  const record = await getRedisJson(buildIdempotencyKey(key), idempotencyRecordSchema);
+  if (!record) {
     return null;
   }
 
   return {
     key,
-    actorId: record.data.actorId,
-    guildId: record.data.guildId,
-    giveawayId: record.data.giveawayId
+    actorId: record.actorId,
+    guildId: record.guildId,
+    giveawayId: record.giveawayId
   };
 }
 
 export async function createIdempotencyRecord(key: string, actorId: string, guildId: string): Promise<boolean> {
-  const result = await getRedis().set(
+  const result = await setRedisJson(
     buildIdempotencyKey(key),
-    JSON.stringify({
+    {
       actorId,
       guildId,
       giveawayId: null
-    }),
-    'PX',
-    IDEMPOTENCY_TTL_MS,
-    'NX'
+    },
+    {
+      ttlMs: IDEMPOTENCY_TTL_MS,
+      ifNotExists: true
+    }
   );
   return result === 'OK';
 }
@@ -74,14 +57,15 @@ export async function setIdempotencyGiveawayId(key: string, giveawayId: string):
   }
 
   const ttlMs = await getRedis().pttl(redisKey);
-  await getRedis().set(
+  await setRedisJson(
     redisKey,
-    JSON.stringify({
+    {
       actorId: existing.actorId,
       guildId: existing.guildId,
       giveawayId
-    }),
-    'PX',
-    ttlMs > 0 ? ttlMs : IDEMPOTENCY_TTL_MS
+    },
+    {
+      ttlMs: ttlMs > 0 ? ttlMs : IDEMPOTENCY_TTL_MS
+    }
   );
 }

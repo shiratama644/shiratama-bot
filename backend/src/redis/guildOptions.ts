@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { getRedis } from './client.js';
+import { buildRedisKey, getRedisJson, setRedisJson } from './kv.js';
 
 const GUILD_OPTIONS_KEY_PREFIX = 'guild:options:';
 const GUILD_OPTIONS_TTL_DAYS = 2;
@@ -29,34 +29,11 @@ const cachedGuildOptionsSchema = z.object({
 export type CachedGuildOptions = z.infer<typeof cachedGuildOptionsSchema>;
 
 function buildGuildOptionsKey(guildId: string): string {
-  return `${GUILD_OPTIONS_KEY_PREFIX}${guildId}`;
-}
-
-async function deleteRedisKey(key: string): Promise<void> {
-  await getRedis().del(key);
+  return buildRedisKey(GUILD_OPTIONS_KEY_PREFIX, guildId);
 }
 
 export async function getCachedGuildOptions(guildId: string): Promise<CachedGuildOptions | null> {
-  const key = buildGuildOptionsKey(guildId);
-  const raw = await getRedis().get(key);
-  if (!raw) {
-    return null;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    await deleteRedisKey(key);
-    return null;
-  }
-
-  const record = cachedGuildOptionsSchema.safeParse(parsed);
-  if (!record.success) {
-    await deleteRedisKey(key);
-    return null;
-  }
-  return record.data;
+  return getRedisJson(buildGuildOptionsKey(guildId), cachedGuildOptionsSchema);
 }
 
 export async function setCachedGuildOptions(
@@ -67,5 +44,5 @@ export async function setCachedGuildOptions(
     ...payload,
     fetchedAt: Date.now()
   };
-  await getRedis().set(buildGuildOptionsKey(guildId), JSON.stringify(record), 'PX', GUILD_OPTIONS_TTL_MS);
+  await setRedisJson(buildGuildOptionsKey(guildId), record, { ttlMs: GUILD_OPTIONS_TTL_MS });
 }
