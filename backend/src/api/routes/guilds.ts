@@ -38,6 +38,10 @@ function areGuildOptionsDifferent(previous: GuildOptionsResponse, next: GuildOpt
   return JSON.stringify(normalize(previous)) !== JSON.stringify(normalize(next));
 }
 
+async function sleep(ms: number): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 async function fetchGuildOptionsFromDiscord(client: Client, guildId: string): Promise<GuildOptionsResponse> {
   const guild = await client.guilds.fetch(guildId).catch(() => null);
   if (!guild) {
@@ -85,7 +89,7 @@ async function fetchGuildOptionsWithRetry(client: Client, guildId: string): Prom
       if (attemptNumber >= DISCORD_GUILD_OPTIONS_FETCH_RETRY_COUNT) {
         break;
       }
-      await new Promise<void>((resolve) => setTimeout(resolve, DISCORD_GUILD_OPTIONS_RETRY_DELAY_MS));
+      await sleep(DISCORD_GUILD_OPTIONS_RETRY_DELAY_MS);
     }
   }
 
