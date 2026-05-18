@@ -15,6 +15,7 @@ const DEFAULT_DATABASE_STATEMENT_TIMEOUT_MS = 30_000;
 const DEFAULT_DATABASE_QUERY_TIMEOUT_MS = 30_000;
 const DEFAULT_DATABASE_KEEPALIVE_INITIAL_DELAY_MS = 10_000;
 const ALLOWED_DATABASE_SSL_MODES = new Set(['disable', 'prefer', 'require', 'verify-ca', 'verify-full']);
+const ALLOWED_DATABASE_SSL_MODES_PRODUCTION = new Set(['require', 'verify-ca', 'verify-full']);
 
 const DATABASE_SCHEMA_SQL_STATEMENTS = [
   `
@@ -249,4 +250,3 @@ export async function initSchema(): Promise<void> {
     throw error;
   }
 }
-const ALLOWED_DATABASE_SSL_MODES_PRODUCTION = new Set(['require', 'verify-ca', 'verify-full']);

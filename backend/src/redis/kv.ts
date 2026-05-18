@@ -78,7 +78,7 @@ export async function scanKeysByPrefix(
     }
     const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', config.scanCount);
     cursor = nextCursor;
-    const limitedKeys = keys.slice(0, Math.max(0, config.maxScannedKeys - scannedCount));
+    const limitedKeys = keys.slice(0, config.maxScannedKeys - scannedCount);
     scannedCount += limitedKeys.length;
     if (limitedKeys.length > 0) {
       await callback(limitedKeys, redis);

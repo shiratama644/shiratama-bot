@@ -34,7 +34,7 @@ function buildOAuthStateKey(state: string): string {
 }
 
 export async function storeOAuthState(state: string, ttlMs: number): Promise<void> {
-  await setRedisJson(buildOAuthStateKey(state), { consumed: false }, { ttlMs });
+  await getRedis().set(buildOAuthStateKey(state), '1', 'PX', Math.max(1, ttlMs));
 }
 
 export async function consumeStoredOAuthState(state: string): Promise<boolean> {
