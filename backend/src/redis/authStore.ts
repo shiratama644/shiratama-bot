@@ -74,9 +74,9 @@ export async function getStoredAuthSession(token: string): Promise<{
 
   return {
     token,
-    user: session.data.user,
-    guilds: session.data.guilds as AuthGuild[],
-    expiresAt: session.data.expiresAt
+    user: session.user,
+    guilds: session.guilds as AuthGuild[],
+    expiresAt: session.expiresAt
   };
 }
 

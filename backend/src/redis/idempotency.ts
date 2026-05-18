@@ -27,9 +27,9 @@ export async function getIdempotencyRecord(key: string): Promise<IdempotencyReco
 
   return {
     key,
-    actorId: record.data.actorId,
-    guildId: record.data.guildId,
-    giveawayId: record.data.giveawayId
+    actorId: record.actorId,
+    guildId: record.guildId,
+    giveawayId: record.giveawayId
   };
 }
 
