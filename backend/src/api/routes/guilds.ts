@@ -77,12 +77,12 @@ async function fetchGuildOptionsFromDiscord(client: Client, guildId: string): Pr
 
 async function fetchGuildOptionsWithRetry(client: Client, guildId: string): Promise<GuildOptionsResponse> {
   let lastError: unknown = null;
-  for (let attemptIndex = 0; attemptIndex <= DISCORD_GUILD_OPTIONS_FETCH_RETRY_COUNT; attemptIndex += 1) {
+  for (let attemptNumber = 0; attemptNumber <= DISCORD_GUILD_OPTIONS_FETCH_RETRY_COUNT; attemptNumber += 1) {
     try {
       return await fetchGuildOptionsFromDiscord(client, guildId);
     } catch (error) {
       lastError = error;
-      if (attemptIndex >= DISCORD_GUILD_OPTIONS_FETCH_RETRY_COUNT) {
+      if (attemptNumber >= DISCORD_GUILD_OPTIONS_FETCH_RETRY_COUNT) {
         break;
       }
       await new Promise<void>((resolve) => setTimeout(resolve, DISCORD_GUILD_OPTIONS_RETRY_DELAY_MS));
