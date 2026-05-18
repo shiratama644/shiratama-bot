@@ -16,19 +16,16 @@ import {
   useQueryClient
 } from '@tanstack/react-query';
 import {
-  type AuthSession,
   createGiveaway,
   endGiveaway,
-  fetchAuthSession,
-  fetchGuildOptions,
   fetchGiveawayUsers,
   fetchGiveaways,
-  fetchSettings,
-  getLoginUrl,
-  logout,
-  rerollGiveaway,
-  updateSettings
-} from '@/lib/api';
+  rerollGiveaway
+} from '@/features/giveaways/api/client';
+import type { AuthSession } from '@/features/auth/types';
+import { fetchAuthSession, getLoginUrl, logout } from '@/features/auth/api/client';
+import { fetchGuildOptions } from '@/features/guilds/api/client';
+import { fetchSettings, updateSettings } from '@/features/settings/api/client';
 
 type SelectOption = {
   value: string;
