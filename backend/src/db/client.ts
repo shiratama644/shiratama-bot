@@ -14,6 +14,7 @@ const DEFAULT_DATABASE_POOL_CONNECTION_TIMEOUT_MS = 10_000;
 const DEFAULT_DATABASE_STATEMENT_TIMEOUT_MS = 30_000;
 const DEFAULT_DATABASE_QUERY_TIMEOUT_MS = 30_000;
 const DEFAULT_DATABASE_KEEPALIVE_INITIAL_DELAY_MS = 10_000;
+const ALLOWED_DATABASE_SSL_MODES = new Set(['disable', 'prefer', 'require', 'verify-ca', 'verify-full']);
 
 const DATABASE_SCHEMA_SQL_STATEMENTS = [
   `
@@ -133,6 +134,9 @@ function buildPool(): Pool {
     logger.error('DATABASE_URL is not defined in environment variables');
     throw new AppError('DATABASE_URL environment variable is not configured.', 500);
   }
+  if (!ALLOWED_DATABASE_SSL_MODES.has(sslMode)) {
+    throw new AppError('DATABASE_SSL_MODE is invalid. Expected disable|prefer|require|verify-ca|verify-full.', 500);
+  }
   if (process.env.NODE_ENV === 'production' && sslMode !== 'require') {
     throw new AppError('DATABASE_SSL_MODE must be "require" in production.', 500);
   }
@@ -221,11 +225,13 @@ async function executeSchemaStatements(
   statements: readonly string[],
   context: string
 ): Promise<void> {
-  for (const statement of statements) {
-    await runDb(async () => {
-      await sql.raw(statement).execute(getDb());
-    }, context);
-  }
+  await runDb(async () => {
+    await getDb().transaction().execute(async (trx) => {
+      for (const statement of statements) {
+        await sql.raw(statement).execute(trx);
+      }
+    });
+  }, context);
 }
 
 export async function initSchema(): Promise<void> {
