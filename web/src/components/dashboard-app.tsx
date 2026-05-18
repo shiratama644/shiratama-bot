@@ -73,6 +73,7 @@ const INTERVAL_UNIT_MS: Record<string, number> = {
   m: 60 * 1000,
   s: 1000
 };
+const END_OF_DAY_OFFSET_MS = 1;
 const MAX_SAVED_GIVEAWAY_FILTERS = 20;
 
 const DEFAULT_GIVEAWAY_SEARCH_CRITERIA: GiveawaySearchCriteria = {
@@ -413,8 +414,10 @@ function DashboardContent({
   const filteredGiveaways = useMemo(() => {
     const giveaways = giveawaysQuery.data ?? [];
     const keyword = giveawayKeywordFilter.trim().toLowerCase();
-    const fromMs = giveawayCreatedFromFilter ? new Date(giveawayCreatedFromFilter).getTime() : null;
-    const toMs = giveawayCreatedToFilter ? new Date(giveawayCreatedToFilter).getTime() : null;
+    const rawFromMs = giveawayCreatedFromFilter ? new Date(giveawayCreatedFromFilter).getTime() : null;
+    const rawToMs = giveawayCreatedToFilter ? new Date(giveawayCreatedToFilter).getTime() : null;
+    const fromMs = rawFromMs !== null && !Number.isNaN(rawFromMs) ? rawFromMs : null;
+    const toMs = rawToMs !== null && !Number.isNaN(rawToMs) ? rawToMs : null;
 
     const filtered = giveaways.filter((giveaway) => {
       if (giveawayFilter === 'active' && giveaway.status !== 'active') {
@@ -445,11 +448,11 @@ function DashboardContent({
         }
       }
       const createdAtMs = new Date(giveaway.createdAt).getTime();
-      if (fromMs !== null && !Number.isNaN(fromMs) && createdAtMs < fromMs) {
+      if (fromMs !== null && createdAtMs < fromMs) {
         return false;
       }
-      if (toMs !== null && !Number.isNaN(toMs)) {
-        const endOfDay = toMs + INTERVAL_UNIT_MS.d - 1;
+      if (toMs !== null) {
+        const endOfDay = toMs + INTERVAL_UNIT_MS.d - END_OF_DAY_OFFSET_MS;
         if (createdAtMs > endOfDay) {
           return false;
         }
