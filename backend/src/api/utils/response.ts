@@ -22,9 +22,8 @@ export function respondError(c: ErrorResponseContext, error: unknown) {
   } else {
     logger.warn('API request failed', logPayload);
   }
-  const message =
-    error instanceof AppError
-      ? getErrorMessage(error)
-      : getPublicErrorMessage(statusCode);
+  const message = error instanceof AppError && statusCode < 500
+    ? getErrorMessage(error)
+    : getPublicErrorMessage(statusCode);
   return c.json({ error: message }, statusCode);
 }

@@ -99,3 +99,63 @@ export async function getStoredAuthSession(token: string): Promise<{
 export async function deleteStoredAuthSession(token: string): Promise<void> {
   await deleteRedisKey(buildAuthSessionKey(token));
 }
+
+type SessionCleanupConfig = {
+  scanCount?: number;
+  maxScannedKeys?: number;
+};
+
+const SESSION_CLEANUP_DEFAULT_SCAN_COUNT = 50;
+const SESSION_CLEANUP_DEFAULT_MAX_SCANNED_KEYS = 200;
+
+export async function cleanupStoredAuthSessions(config?: SessionCleanupConfig): Promise<number> {
+  const normalizedScanCount = config?.scanCount !== undefined
+    ? Math.floor(config.scanCount)
+    : SESSION_CLEANUP_DEFAULT_SCAN_COUNT;
+  const normalizedMaxScannedKeys = config?.maxScannedKeys !== undefined
+    ? Math.floor(config.maxScannedKeys)
+    : SESSION_CLEANUP_DEFAULT_MAX_SCANNED_KEYS;
+  const scanCount = Math.max(1, normalizedScanCount);
+  const maxScannedKeys = Math.max(1, normalizedMaxScannedKeys);
+  const redis = getRedis();
+  let deletedCount = 0;
+  let scannedCount = 0;
+  let cursor = '0';
+
+  do {
+    const [nextCursor, keys] = await redis.scan(
+      cursor,
+      'MATCH',
+      `${AUTH_SESSION_KEY_PREFIX}*`,
+      'COUNT',
+      scanCount
+    );
+    cursor = nextCursor;
+
+    for (const key of keys) {
+      scannedCount += 1;
+      const raw = await redis.get(key);
+      if (!raw) {
+        continue;
+      }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        await deleteRedisKey(key);
+        deletedCount += 1;
+        continue;
+      }
+      const session = storedAuthSessionSchema.safeParse(parsed);
+      if (!session.success || session.data.expiresAt <= Date.now()) {
+        await deleteRedisKey(key);
+        deletedCount += 1;
+      }
+      if (scannedCount >= maxScannedKeys) {
+        return deletedCount;
+      }
+    }
+  } while (cursor !== '0');
+
+  return deletedCount;
+}

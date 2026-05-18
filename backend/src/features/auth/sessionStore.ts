@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import {
+  cleanupStoredAuthSessions,
   consumeStoredOAuthState,
   deleteStoredAuthSession,
   getStoredAuthSession,
@@ -7,12 +8,43 @@ import {
   storeOAuthState
 } from '../../redis/authStore.js';
 import { AppError } from '../../shared/errors/index.js';
+import { logger } from '../../shared/logger/index.js';
 import { OAUTH_STATE_TTL_MS, SESSION_TTL_MS } from './constants.js';
 import { createSessionCookieHeader, parseCookieToken } from './cookies.js';
 import type { AuthSession } from './types.js';
 
+const SESSION_CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
+const SESSION_CLEANUP_SCAN_COUNT = 50;
+const SESSION_CLEANUP_MAX_SCANNED_KEYS = 200;
+
+let lastSessionCleanupAt = 0;
+let cleanupInFlight: Promise<void> | null = null;
+
 export async function cleanupExpiredSessions(): Promise<void> {
-  return Promise.resolve();
+  const now = Date.now();
+  if (now - lastSessionCleanupAt < SESSION_CLEANUP_INTERVAL_MS) {
+    return;
+  }
+  if (cleanupInFlight) {
+    return cleanupInFlight;
+  }
+  cleanupInFlight = (async () => {
+    try {
+      const deletedCount = await cleanupStoredAuthSessions({
+        scanCount: SESSION_CLEANUP_SCAN_COUNT,
+        maxScannedKeys: SESSION_CLEANUP_MAX_SCANNED_KEYS
+      });
+      if (deletedCount > 0) {
+        logger.info('Expired or invalid auth sessions cleaned up.', { deletedCount });
+      }
+    } catch (error) {
+      logger.warn('Auth session cleanup failed.', { error });
+    } finally {
+      lastSessionCleanupAt = Date.now();
+      cleanupInFlight = null;
+    }
+  })();
+  return cleanupInFlight;
 }
 
 export async function createOAuthState(): Promise<string> {
