@@ -50,9 +50,9 @@
    - 影響: 長期トークン運用時のリスク評価が難しい。
    - 根拠: `/home/runner/work/applejp-bot/applejp-bot/backend/src/api/middleware/security.ts`
 
-9. **セキュリティ課題の一次情報ドキュメント不在**
-   - 現状: `LibToInstall.md` から `security.md` 参照があるが、対象ファイルが未整備だった。
-   - 影響: 対応優先度や背景が共有されづらい。
+9. **セキュリティ課題ドキュメントの運用ルール未整備**
+   - 現状: `docs/issues/security.md` は作成済みだが、更新トリガー（リリース時・設計変更時など）が明文化されていない。
+   - 影響: 時間経過で記述が実装と乖離し、優先度判断がぶれる可能性がある。
    - 根拠: `/home/runner/work/applejp-bot/applejp-bot/docs/LibToInstall.md`
 
 ## 補足（実装済みで評価できる点）

@@ -6,9 +6,9 @@
 
 ## High
 
-1. **ドキュメント参照不整合（ファイル名/参照先）**
-   - 現状: `LibToInstall.md` が `docs/feature-list.md` や `security.md` / `program.md` を参照している。
-   - 課題: 実ファイル構成との不整合により、参照切れや把握漏れが起きる。
+1. **ドキュメント運用ルール未整備（参照更新の属人化）**
+   - 現状: docs間の参照は更新されたが、命名・配置変更時にどの文書を追従修正するかのルールが明文化されていない。
+   - 課題: 将来の改名/移動時に再び参照切れが発生しやすい。
    - 根拠:
      - `/home/runner/work/applejp-bot/applejp-bot/docs/LibToInstall.md`
      - `/home/runner/work/applejp-bot/applejp-bot/docs/FeatureList.md`
