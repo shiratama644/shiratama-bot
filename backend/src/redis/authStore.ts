@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { AuthGuild } from '../features/auth/types.js';
 import { getRedis } from './client.js';
+import { buildRedisKey, deleteRedisKey, getRedisJson, scanKeysByPrefix, setRedisJson } from './kv.js';
 
 const AUTH_SESSION_KEY_PREFIX = 'auth:session:';
 const OAUTH_STATE_KEY_PREFIX = 'auth:oauth-state:';
@@ -25,19 +26,15 @@ const storedAuthSessionSchema = z.object({
 type StoredAuthSession = z.infer<typeof storedAuthSessionSchema>;
 
 function buildAuthSessionKey(token: string): string {
-  return `${AUTH_SESSION_KEY_PREFIX}${token}`;
+  return buildRedisKey(AUTH_SESSION_KEY_PREFIX, token);
 }
 
 function buildOAuthStateKey(state: string): string {
-  return `${OAUTH_STATE_KEY_PREFIX}${state}`;
-}
-
-async function deleteRedisKey(key: string): Promise<void> {
-  await getRedis().del(key);
+  return buildRedisKey(OAUTH_STATE_KEY_PREFIX, state);
 }
 
 export async function storeOAuthState(state: string, ttlMs: number): Promise<void> {
-  await getRedis().set(buildOAuthStateKey(state), '1', 'PX', Math.max(1, ttlMs));
+  await setRedisJson(buildOAuthStateKey(state), { consumed: false }, { ttlMs });
 }
 
 export async function consumeStoredOAuthState(state: string): Promise<boolean> {
@@ -59,7 +56,7 @@ export async function insertAuthSession(params: {
     expiresAt: params.expiresAt.getTime()
   };
   const ttlMs = Math.max(1, record.expiresAt - Date.now());
-  await getRedis().set(buildAuthSessionKey(params.token), JSON.stringify(record), 'PX', ttlMs);
+  await setRedisJson(buildAuthSessionKey(params.token), record, { ttlMs });
 }
 
 export async function getStoredAuthSession(token: string): Promise<{
@@ -69,21 +66,8 @@ export async function getStoredAuthSession(token: string): Promise<{
   expiresAt: number;
 } | null> {
   const key = buildAuthSessionKey(token);
-  const raw = await getRedis().get(key);
-  if (!raw) {
-    return null;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    await deleteRedisKey(key);
-    return null;
-  }
-
-  const session = storedAuthSessionSchema.safeParse(parsed);
-  if (!session.success || session.data.expiresAt <= Date.now()) {
+  const session = await getRedisJson(key, storedAuthSessionSchema);
+  if (!session || session.expiresAt <= Date.now()) {
     await deleteRedisKey(key);
     return null;
   }
@@ -119,43 +103,42 @@ export async function cleanupStoredAuthSessions(config?: SessionCleanupConfig): 
   const maxScannedKeys = Math.max(1, normalizedMaxScannedKeys);
   const redis = getRedis();
   let deletedCount = 0;
-  let scannedCount = 0;
-  let cursor = '0';
-
-  do {
-    const [nextCursor, keys] = await redis.scan(
-      cursor,
-      'MATCH',
-      `${AUTH_SESSION_KEY_PREFIX}*`,
-      'COUNT',
-      scanCount
-    );
-    cursor = nextCursor;
-
-    for (const key of keys) {
-      scannedCount += 1;
-      const raw = await redis.get(key);
-      if (!raw) {
-        continue;
+  await scanKeysByPrefix(
+    AUTH_SESSION_KEY_PREFIX,
+    { scanCount, maxScannedKeys },
+    async (keys, client) => {
+      const rawValues = await client.mget(keys);
+      const keysToDelete: string[] = [];
+      const now = Date.now();
+      for (let i = 0; i < keys.length; i += 1) {
+        const raw = rawValues[i];
+        if (!raw) {
+          continue;
+        }
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          keysToDelete.push(keys[i]);
+          continue;
+        }
+        const session = storedAuthSessionSchema.safeParse(parsed);
+        if (!session.success || session.data.expiresAt <= now) {
+          keysToDelete.push(keys[i]);
+        }
       }
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        await deleteRedisKey(key);
-        deletedCount += 1;
-        continue;
+      if (keysToDelete.length === 0) {
+        return;
       }
-      const session = storedAuthSessionSchema.safeParse(parsed);
-      if (!session.success || session.data.expiresAt <= Date.now()) {
-        await deleteRedisKey(key);
-        deletedCount += 1;
+      const pipeline = client.pipeline();
+      for (const key of keysToDelete) {
+        pipeline.del(key);
       }
-      if (scannedCount >= maxScannedKeys) {
-        return deletedCount;
-      }
-    }
-  } while (cursor !== '0');
+      await pipeline.exec();
+      deletedCount += keysToDelete.length;
+    },
+    redis
+  );
 
   return deletedCount;
 }
