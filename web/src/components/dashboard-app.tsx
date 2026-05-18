@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Select from 'react-select';
 import DatePicker from 'react-datepicker';
 import * as chrono from 'chrono-node';
@@ -139,6 +139,33 @@ function parseIntervalMs(input: string): number | null {
 
 function stripLeadingMarker(name: string): string {
   return name.replace(/^[@#]/, '').trimStart();
+}
+
+function readSavedGiveawayFilters(guildId: string | null): GiveawaySavedFilter[] {
+  if (!guildId || typeof window === 'undefined') {
+    return [];
+  }
+  const key = `applejp:giveaway-filters:${guildId}`;
+  const raw = window.localStorage.getItem(key);
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw) as GiveawaySavedFilter[];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter((item): item is GiveawaySavedFilter =>
+      Boolean(
+        item &&
+        typeof item.id === 'string' &&
+        typeof item.name === 'string' &&
+        item.criteria
+      )
+    );
+  } catch {
+    return [];
+  }
 }
 
 function getClaimState(giveaway: {
@@ -342,54 +369,6 @@ function DashboardContent({
     sort: giveawaySort
   };
 
-  useEffect(() => {
-    if (!activeGuildId || typeof window === 'undefined') {
-      setSavedGiveawayFilters([]);
-      setSelectedSavedGiveawayFilterId('');
-      return;
-    }
-    const key = `applejp:giveaway-filters:${activeGuildId}`;
-    const raw = window.localStorage.getItem(key);
-    if (!raw) {
-      setSavedGiveawayFilters([]);
-      setSelectedSavedGiveawayFilterId('');
-      return;
-    }
-    try {
-      const parsed = JSON.parse(raw) as GiveawaySavedFilter[];
-      if (!Array.isArray(parsed)) {
-        setSavedGiveawayFilters([]);
-        setSelectedSavedGiveawayFilterId('');
-        return;
-      }
-      setSavedGiveawayFilters(
-        parsed.filter((item): item is GiveawaySavedFilter =>
-          Boolean(
-            item &&
-            typeof item.id === 'string' &&
-            typeof item.name === 'string' &&
-            item.criteria
-          )
-        )
-      );
-      setSelectedSavedGiveawayFilterId('');
-    } catch {
-      setSavedGiveawayFilters([]);
-      setSelectedSavedGiveawayFilterId('');
-    }
-  }, [activeGuildId]);
-
-  useEffect(() => {
-    setSavedGiveawayFilterName('');
-    setGiveawayFilter(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.status);
-    setGiveawayCreatorFilter(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.creatorId);
-    setGiveawayChannelFilter(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.channelId);
-    setGiveawayKeywordFilter(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.keyword);
-    setGiveawayCreatedFromFilter(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.createdFrom);
-    setGiveawayCreatedToFilter(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.createdTo);
-    setGiveawaySort(DEFAULT_GIVEAWAY_SEARCH_CRITERIA.sort);
-  }, [activeGuildId]);
-
   const persistSavedGiveawayFilters = (next: GiveawaySavedFilter[]) => {
     setSavedGiveawayFilters(next);
     if (!activeGuildId || typeof window === 'undefined') {
@@ -412,6 +391,15 @@ function DashboardContent({
   const resetGiveawaySearchCriteria = () => {
     applyGiveawaySearchCriteria(DEFAULT_GIVEAWAY_SEARCH_CRITERIA);
     setSelectedSavedGiveawayFilterId('');
+  };
+
+  const selectGuild = (guildId: string) => {
+    setSelectedGuildId(guildId);
+    setSettingsDraft(null);
+    setSavedGiveawayFilterName('');
+    setSavedGiveawayFilters(readSavedGiveawayFilters(guildId));
+    setSelectedSavedGiveawayFilterId('');
+    applyGiveawaySearchCriteria(DEFAULT_GIVEAWAY_SEARCH_CRITERIA);
   };
 
   const filteredGiveaways = useMemo(() => {
@@ -668,8 +656,7 @@ function DashboardContent({
                 key={guild.id}
                 disabled={!guild.canUseDashboard}
                 onClick={() => {
-                  setSelectedGuildId(guild.id);
-                  setSettingsDraft(null);
+                  selectGuild(guild.id);
                 }}
                 className={`flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-sm ${
                   guild.canUseDashboard
@@ -793,8 +780,7 @@ function DashboardContent({
                 if (!guild.canUseDashboard) {
                   return;
                 }
-                setSelectedGuildId(guild.id);
-                setSettingsDraft(null);
+                selectGuild(guild.id);
                 setMenuOpen(false);
               }}
               disabled={!guild.canUseDashboard}
